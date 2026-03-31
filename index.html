@@ -1,0 +1,1162 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard de Estoque — Grupo Kuhn</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap');
+
+  :root {
+    --bg: #0d0f14;
+    --surface: #13161e;
+    --surface2: #1a1f2c;
+    --border: #252b3b;
+    --accent: #e8433a;
+    --accent2: #f0a500;
+    --accent3: #3a7bd5;
+    --green: #2ecc71;
+    --red: #e74c3c;
+    --text: #e8eaf0;
+    --muted: #6b7494;
+    --font-head: 'Syne', sans-serif;
+    --font-mono: 'Space Mono', monospace;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { font-size:14px; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-mono);
+    min-height: 100vh;
+  }
+
+  /* ─── HEADER ─── */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 18px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top:0;
+    z-index:100;
+    background: var(--bg);
+  }
+  .logo {
+    font-family: var(--font-head);
+    font-weight:800;
+    font-size:1.15rem;
+    letter-spacing:-0.02em;
+  }
+  .logo span { color: var(--accent); }
+  .header-meta {
+    font-size:0.72rem;
+    color: var(--muted);
+    text-align:right;
+    line-height:1.6;
+  }
+  .header-meta strong { color: var(--accent2); }
+
+  /* ─── UPLOAD ZONE ─── */
+  #upload-zone {
+    border: 1px dashed var(--border);
+    border-radius:8px;
+    padding:32px;
+    margin:32px;
+    text-align:center;
+    cursor:pointer;
+    transition: border-color 0.2s, background 0.2s;
+    position: relative;
+  }
+  #upload-zone:hover, #upload-zone.drag { border-color: var(--accent); background: rgba(232,67,58,0.04); }
+  #upload-zone h2 { font-family:var(--font-head); font-size:1.3rem; margin-bottom:8px; }
+  #upload-zone p { color: var(--muted); font-size:0.8rem; }
+  #upload-zone input[type=file] { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+  .upload-row { display:flex; gap:16px; align-items:stretch; flex-wrap:wrap; }
+  .upload-card {
+    flex:1; min-width:240px; border:1px dashed var(--border); border-radius:8px;
+    padding:20px 24px; cursor:pointer; position:relative; transition: border-color 0.2s, background 0.2s;
+  }
+  .upload-card:hover { border-color: var(--accent2); background: rgba(240,165,0,0.04); }
+  .upload-card input[type=file] { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+  .upload-card h3 { font-family:var(--font-head); font-size:0.95rem; margin-bottom:6px; }
+  .upload-card .badge {
+    display:inline-block; font-size:0.65rem; padding:2px 8px; border-radius:20px;
+    background: rgba(107,116,148,0.2); color:var(--muted); margin-bottom:10px;
+  }
+  .upload-card.loaded { border-color: var(--green); }
+  .upload-card.loaded .badge { background: rgba(46,204,113,0.15); color: var(--green); }
+  .upload-card p { color:var(--muted); font-size:0.75rem; }
+
+  /* ─── TABS ─── */
+  #app { display:none; flex-direction:column; height:100vh; }
+  .tabs-bar {
+    display:flex; gap:0; border-bottom:1px solid var(--border);
+    padding: 0 32px; background: var(--bg); position:sticky; top:57px; z-index:90;
+    overflow-x:auto;
+  }
+  .tab {
+    padding:14px 20px; font-family:var(--font-head); font-size:0.82rem; font-weight:600;
+    letter-spacing:0.04em; text-transform:uppercase; cursor:pointer;
+    border-bottom:2px solid transparent; white-space:nowrap;
+    color:var(--muted); transition: color 0.15s, border-color 0.15s;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-content { display:none; padding:28px 32px; overflow-y:auto; flex:1; }
+  .tab-content.active { display:block; }
+
+  /* ─── COMPANY FILTER ─── */
+  .filter-bar {
+    display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:24px;
+  }
+  .filter-bar label { font-size:0.72rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.08em; margin-right:4px; }
+  .btn-filter {
+    padding:5px 14px; border-radius:4px; border:1px solid var(--border);
+    background:transparent; color:var(--muted); font-family:var(--font-mono); font-size:0.72rem;
+    cursor:pointer; transition:all 0.15s;
+  }
+  .btn-filter:hover { border-color: var(--accent2); color:var(--accent2); }
+  .btn-filter.active { border-color: var(--accent); background: rgba(232,67,58,0.12); color: var(--accent); }
+
+  /* ─── GRID LAYOUT ─── */
+  .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+  .grid-4 { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; }
+  @media(max-width:900px) { .grid-2{grid-template-columns:1fr;} .grid-4{grid-template-columns:1fr 1fr;} }
+
+  /* ─── SECTION ─── */
+  .section { margin-bottom:28px; }
+  .section-header {
+    display:flex; align-items:baseline; gap:12px; margin-bottom:14px;
+    border-left:3px solid var(--accent); padding-left:12px;
+  }
+  .section-header h2 { font-family:var(--font-head); font-size:1rem; font-weight:700; }
+  .section-header span { font-size:0.7rem; color:var(--muted); }
+
+  /* ─── STAT CARDS ─── */
+  .stat-card {
+    background: var(--surface); border:1px solid var(--border); border-radius:6px;
+    padding:16px 18px;
+  }
+  .stat-card .stat-label { font-size:0.68rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); margin-bottom:8px; }
+  .stat-card .stat-value { font-family:var(--font-head); font-size:1.7rem; font-weight:800; line-height:1; }
+  .stat-card .stat-sub { font-size:0.7rem; color:var(--muted); margin-top:6px; }
+  .stat-card .stat-delta { font-size:0.75rem; margin-top:4px; }
+  .delta-up { color: var(--green); }
+  .delta-down { color: var(--red); }
+  .delta-zero { color: var(--muted); }
+
+  /* ─── PRICE BAND TABLE ─── */
+  .band-table { width:100%; border-collapse:collapse; }
+  .band-table th {
+    font-size:0.65rem; text-transform:uppercase; letter-spacing:0.08em;
+    color:var(--muted); padding:8px 12px; text-align:left; border-bottom:1px solid var(--border);
+  }
+  .band-table td { padding:9px 12px; border-bottom:1px solid rgba(37,43,59,0.5); font-size:0.82rem; }
+  .band-table tr:last-child td { border-bottom:none; }
+  .band-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .band-label {
+    display:inline-block; padding:2px 10px; border-radius:3px; font-size:0.68rem;
+    font-weight:700; letter-spacing:0.04em;
+  }
+  .band-a { background:rgba(46,204,113,0.15); color:#2ecc71; }
+  .band-b { background:rgba(58,123,213,0.15); color:#3a7bd5; }
+  .band-c { background:rgba(240,165,0,0.15); color:#f0a500; }
+  .band-d { background:rgba(232,67,58,0.15); color:#e8433a; }
+  .band-e { background:rgba(155,89,182,0.15); color:#9b59b6; }
+
+  .num-pos { color: var(--green); }
+  .num-neg { color: var(--red); }
+  .num-zero { color: var(--muted); }
+
+  /* ─── BAR CHART ─── */
+  .bar-chart { display:flex; flex-direction:column; gap:6px; }
+  .bar-row { display:flex; align-items:center; gap:10px; }
+  .bar-row-label { font-size:0.72rem; color:var(--muted); width:100px; flex-shrink:0; text-align:right; }
+  .bar-track { flex:1; background:var(--border); border-radius:2px; height:20px; position:relative; overflow:hidden; }
+  .bar-fill { height:100%; border-radius:2px; transition: width 0.5s cubic-bezier(.4,0,.2,1); }
+  .bar-val { font-size:0.72rem; font-weight:700; position:absolute; right:6px; top:50%; transform:translateY(-50%); }
+  .bar-acum { background: var(--accent); }
+  .bar-rec { background: var(--green); }
+  .bar-ven { background: var(--accent2); }
+
+  /* ─── SAFETY STOCK TABLE ─── */
+  .ss-table { width:100%; border-collapse:collapse; }
+  .ss-table th { font-size:0.65rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); padding:8px 10px; text-align:left; border-bottom:1px solid var(--border); }
+  .ss-table td { padding:6px 10px; border-bottom:1px solid rgba(37,43,59,0.4); }
+  .ss-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .ss-input {
+    width:70px; background:var(--surface2); border:1px solid var(--border);
+    color:var(--text); font-family:var(--font-mono); font-size:0.82rem;
+    padding:4px 8px; border-radius:4px; text-align:center;
+  }
+  .ss-input:focus { outline:none; border-color: var(--accent2); }
+  .btn-save {
+    padding:8px 20px; background:var(--accent); color:#fff; border:none;
+    font-family:var(--font-head); font-size:0.8rem; font-weight:700; border-radius:4px;
+    cursor:pointer; letter-spacing:0.04em; transition: opacity 0.15s;
+  }
+  .btn-save:hover { opacity:0.85; }
+
+  /* ─── ORDER TABLE ─── */
+  .order-table { width:100%; border-collapse:collapse; }
+  .order-table th { font-size:0.65rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); padding:8px 12px; text-align:left; border-bottom:1px solid var(--border); }
+  .order-table td { padding:9px 12px; border-bottom:1px solid rgba(37,43,59,0.4); font-size:0.82rem; }
+  .order-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .need-chip {
+    display:inline-block; padding:2px 10px; border-radius:3px; font-weight:700;
+    font-size:0.8rem;
+  }
+  .need-yes { background:rgba(232,67,58,0.15); color:#e8433a; }
+  .need-no { background:rgba(46,204,113,0.1); color:#2ecc71; }
+
+  /* ─── SALES CURVE ─── */
+  .canvas-wrap { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:16px; margin-bottom:20px; }
+  canvas { width:100%; display:block; }
+
+  /* ─── ACESSORIOS ─── */
+  .ac-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(160px,1fr)); gap:12px; }
+  .ac-card {
+    background:var(--surface); border:1px solid var(--border); border-radius:6px;
+    padding:14px 16px;
+  }
+  .ac-card .ac-type { font-size:0.65rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); margin-bottom:6px; }
+  .ac-card .ac-count { font-family:var(--font-head); font-size:1.5rem; font-weight:800; }
+  .ac-card .ac-label { font-size:0.72rem; color:var(--muted); margin-top:4px; }
+
+  /* ─── MISC ─── */
+  .page-title {
+    font-family: var(--font-head); font-size:1.5rem; font-weight:800; margin-bottom:4px;
+  }
+  .page-sub { color:var(--muted); font-size:0.78rem; margin-bottom:24px; }
+  .info-box {
+    background:rgba(58,123,213,0.08); border:1px solid rgba(58,123,213,0.2);
+    border-radius:6px; padding:12px 16px; font-size:0.78rem; color:#7aadff; margin-bottom:20px;
+  }
+  .tag { display:inline-block; padding:1px 8px; border-radius:3px; font-size:0.65rem; font-weight:700; background:rgba(232,67,58,0.15); color:var(--accent); margin-left:6px; }
+  .empresa-col { display:flex; flex-direction:column; gap:16px; }
+  .empresa-block {
+    background:var(--surface); border:1px solid var(--border); border-radius:6px; overflow:hidden;
+  }
+  .empresa-block-header {
+    padding:10px 16px; background:var(--surface2); border-bottom:1px solid var(--border);
+    font-family:var(--font-head); font-size:0.82rem; font-weight:700; display:flex; align-items:center; gap:8px;
+  }
+  .empresa-block-header .eid { font-size:0.68rem; color:var(--muted); }
+  .scroll-x { overflow-x:auto; }
+  
+  /* Week selector */
+  .week-sel { display:flex; gap:10px; align-items:center; margin-bottom:20px; flex-wrap:wrap; }
+  .week-sel label { font-size:0.72rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.08em; }
+  .week-sel select {
+    background:var(--surface); border:1px solid var(--border); color:var(--text);
+    font-family:var(--font-mono); font-size:0.8rem; padding:6px 10px; border-radius:4px;
+  }
+  .week-sel select:focus { outline:none; border-color:var(--accent2); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">KUHN <span>///</span> ESTOQUE</div>
+  <div class="header-meta" id="header-meta">
+    Nenhum arquivo carregado
+  </div>
+</header>
+
+<!-- UPLOAD SECTION -->
+<div id="upload-section" style="padding:32px; max-width:900px; margin:40px auto;">
+  <div class="page-title">Dashboard de Análise de Estoque</div>
+  <div class="page-sub">Faça upload dos arquivos exportados do sistema para iniciar a análise.</div>
+  <div class="info-box">
+    📌 Carregue a planilha semanal de inventário + o histórico de vendas. O sistema vai automaticamente comparar semanas, calcular recebimentos e vendas, e sugerir pedidos.
+  </div>
+  <div class="upload-row">
+    <div class="upload-card" id="card-inv">
+      <div class="badge" id="badge-inv">AGUARDANDO</div>
+      <h3>Registro de Inventário</h3>
+      <p>ExportacaoRegistroInventario.csv<br>Exportar toda semana do ERP</p>
+      <input type="file" accept=".csv" id="file-inv">
+    </div>
+    <div class="upload-card" id="card-ven">
+      <div class="badge" id="badge-ven">AGUARDANDO</div>
+      <h3>Produtos/Serviços Vendidos</h3>
+      <p>ProdutosServicosVendidos.csv<br>Histórico de vendas do período</p>
+      <input type="file" accept=".csv" id="file-ven">
+    </div>
+  </div>
+  <div style="margin-top:20px; text-align:right;">
+    <button class="btn-save" id="btn-analisar" onclick="analisar()" disabled>ANALISAR →</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="tabs-bar">
+    <div class="tab active" onclick="showTab('tab-estoque')">📦 Estoque Atual</div>
+    <div class="tab" onclick="showTab('tab-movimentacao')">↕ Movimentação</div>
+    <div class="tab" onclick="showTab('tab-vendas-semana')">📊 Vendas / Semana</div>
+    <div class="tab" onclick="showTab('tab-seguranca')">🔒 Estoque de Segurança</div>
+    <div class="tab" onclick="showTab('tab-pedidos')">🛒 Pedidos Sugeridos</div>
+  </div>
+
+  <!-- TAB 1: ESTOQUE ATUAL -->
+  <div class="tab-content active" id="tab-estoque">
+    <div class="page-title">Estoque Atual</div>
+    <div class="page-sub" id="sub-estoque"></div>
+    <div class="filter-bar">
+      <label>Empresa:</label>
+      <div id="filters-estoque"></div>
+    </div>
+    <div id="content-estoque"></div>
+  </div>
+
+  <!-- TAB 2: MOVIMENTAÇÃO -->
+  <div class="tab-content" id="tab-movimentacao">
+    <div class="page-title">Movimentação Semanal</div>
+    <div class="page-sub">Compara semana atual vs semana anterior</div>
+    <div class="info-box" id="mov-info">Carregue uma segunda semana de inventário para ver movimentação.</div>
+    <div class="week-sel">
+      <label>Semana Anterior:</label>
+      <select id="sel-semana-ant" onchange="renderMovimentacao()"><option value="">— sem dados —</option></select>
+      <label>Semana Atual:</label>
+      <select id="sel-semana-at" onchange="renderMovimentacao()"><option value="">— sem dados —</option></select>
+    </div>
+    <div class="filter-bar">
+      <label>Empresa:</label>
+      <div id="filters-mov"></div>
+    </div>
+    <div id="content-mov"></div>
+  </div>
+
+  <!-- TAB 3: VENDAS POR SEMANA -->
+  <div class="tab-content" id="tab-vendas-semana">
+    <div class="page-title">Curva de Vendas</div>
+    <div class="page-sub">Análise do histórico de vendas por categoria e faixa de preço</div>
+    <div class="filter-bar">
+      <label>Empresa:</label>
+      <div id="filters-vendas"></div>
+    </div>
+    <div id="content-vendas"></div>
+  </div>
+
+  <!-- TAB 4: SEGURANÇA -->
+  <div class="tab-content" id="tab-seguranca">
+    <div class="page-title">Estoque de Segurança</div>
+    <div class="page-sub">Defina o mínimo de peças por categoria, faixa de preço e loja</div>
+    <div class="info-box">Edite os valores e clique em <strong>Salvar</strong>. O ajuste automático aplica a curva de sazonalidade do histórico de vendas.</div>
+    <div id="content-seguranca"></div>
+  </div>
+
+  <!-- TAB 5: PEDIDOS -->
+  <div class="tab-content" id="tab-pedidos">
+    <div class="page-title">Pedidos Sugeridos</div>
+    <div class="page-sub">Quantidade a repor por categoria, faixa de preço e loja</div>
+    <div class="filter-bar">
+      <label>Empresa:</label>
+      <div id="filters-pedidos"></div>
+    </div>
+    <div id="content-pedidos"></div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+//  GLOBAL STATE
+// ══════════════════════════════════════════════
+const STATE = {
+  inventarios: {}, // key = "semanaX" | "atual"
+  semanaAtual: null,
+  semanaAnterior: null,
+  vendidos: null,
+  safetyStock: {},
+  empresas: {},
+  filtroEmpresa: 'TODAS',
+};
+
+const EMPRESAS = {
+  '1':  'ALTAMIRA LJR',
+  '16': 'PARAUAPEBAS LJR',
+  '17': 'OTICA PARAUAPEBAS',
+  '18': 'TAPAJOS SHOP',
+  '19': 'SHOP PARAUAPEBAS',
+  '20': 'PARAISO SHOP',
+  '21': 'OTICA TAPAJOS',
+};
+
+const BANDS_OC = [
+  { key:'A', label:'Até R$200',    min:0,   max:200  },
+  { key:'B', label:'R$201–R$350',  min:201, max:350  },
+  { key:'C', label:'R$351–R$500',  min:351, max:500  },
+  { key:'D', label:'R$501–R$700',  min:501, max:700  },
+  { key:'E', label:'Acima R$700',  min:701, max:9999 },
+];
+const BANDS_REL = [
+  { key:'A', label:'Até R$300',    min:0,   max:300  },
+  { key:'B', label:'R$301–R$500',  min:301, max:500  },
+  { key:'C', label:'R$501–R$700',  min:501, max:700  },
+  { key:'D', label:'Acima R$700',  min:701, max:9999 },
+];
+const BANDS_GRAU = [
+  { key:'A', label:'Até R$300',    min:0,   max:300  },
+  { key:'B', label:'R$301–R$500',  min:301, max:500  },
+  { key:'C', label:'R$501–R$700',  min:501, max:700  },
+  { key:'D', label:'Acima R$700',  min:701, max:9999 },
+];
+
+// ══════════════════════════════════════════════
+//  FILE PARSING
+// ══════════════════════════════════════════════
+
+function parseBR(s) {
+  s = String(s || '').trim();
+  if (!s) return 0;
+  if (s.includes(',')) s = s.replace(/\./g,'').replace(',','.');
+  return parseFloat(s) || 0;
+}
+
+function parseInventario(text) {
+  const lines = text.split(/\r?\n/);
+  const rows = [];
+  let subsetor = '';
+  let dataRelatorio = '';
+
+  // Find date
+  for (let i = 0; i < 20; i++) {
+    const parts = lines[i].split(';');
+    if (parts.length >= 5 && parts[4] && parts[4].includes('baseados na data')) {
+      dataRelatorio = parts[4].replace('Saldos baseados na data','').trim();
+    }
+  }
+
+  for (let i = 16; i < lines.length; i++) {
+    const parts = lines[i].split(';');
+    if (!parts[0] && parts[1] && parts[1].trim()) {
+      subsetor = parts[1].trim();
+    }
+    if (parts[0] && /^\d+$/.test(parts[0].trim())) {
+      rows.push({
+        cod: parts[0].trim(),
+        desc: (parts[1]||'').trim(),
+        ref: (parts[2]||'').trim(),
+        empr: (parts[3]||'').trim(),
+        saldo: parseBR(parts[6]),
+        custo: parseBR(parts[7]),
+        subtotal: parseBR(parts[8]),
+        subsetor,
+      });
+    }
+  }
+  return { rows, data: dataRelatorio };
+}
+
+function parseVendidos(text) {
+  const lines = text.split(/\r?\n/);
+  const rows = [];
+  const groups = { 'OCULOS': null, 'RELOGIOS': null, 'GRAU': null, 'MULTI LENTE': null };
+  const groupLines = {};
+
+  let currentGroup = null;
+  for (let i = 0; i < lines.length; i++) {
+    const parts = lines[i].split(';');
+    if (parts[0].startsWith('Grupo -')) {
+      currentGroup = parts[0].replace('Grupo -','').trim();
+    }
+    if (currentGroup && parts[0] && /^\d+$/.test(parts[0].trim())) {
+      const empresaRaw = (parts[4]||'').trim();
+      const emprId = empresaRaw.split(' - ')[0].trim().split(' ')[0];
+      const qty = parseBR(parts[5]);
+      if (qty <= 0) continue;
+      rows.push({
+        grupo: currentGroup,
+        cod: parts[0].trim(),
+        ref: (parts[2]||'').trim(),
+        empr: emprId,
+        qty,
+        custo: parseBR(parts[6]),
+        prTabela: parseBR(parts[8]),
+        prVenda: parseBR(parts[9]),
+      });
+    }
+  }
+  return rows;
+}
+
+// ══════════════════════════════════════════════
+//  UPLOAD HANDLERS
+// ══════════════════════════════════════════════
+let invLoaded = false, venLoaded = false;
+let rawInv = null, rawVen = null;
+
+document.getElementById('file-inv').addEventListener('change', function(e) {
+  const f = e.target.files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = (ev) => {
+    rawInv = ev.target.result;
+    invLoaded = true;
+    document.getElementById('card-inv').classList.add('loaded');
+    document.getElementById('badge-inv').textContent = '✓ CARREGADO';
+    checkReady();
+  };
+  r.readAsText(f, 'latin1');
+});
+
+document.getElementById('file-ven').addEventListener('change', function(e) {
+  const f = e.target.files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = (ev) => {
+    rawVen = ev.target.result;
+    venLoaded = true;
+    document.getElementById('card-ven').classList.add('loaded');
+    document.getElementById('badge-ven').textContent = '✓ CARREGADO';
+    checkReady();
+  };
+  r.readAsText(f, 'latin1');
+});
+
+function checkReady() {
+  document.getElementById('btn-analisar').disabled = !(invLoaded && venLoaded);
+}
+
+function analisar() {
+  const inv = parseInventario(rawInv);
+  STATE.semanaAtual = { rows: inv.rows, data: inv.data, key: inv.data || 'Semana Atual' };
+  STATE.vendidos = parseVendidos(rawVen);
+
+  // Adicionar semana ao histórico
+  const key = inv.data || `semana_${Date.now()}`;
+  STATE.inventarios[key] = inv.rows;
+
+  // Popular select de semanas
+  updateSemanaSelects();
+
+  // Inicializar safety stock padrão
+  initSafetyStock();
+
+  // Mostrar app
+  document.getElementById('upload-section').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  document.getElementById('header-meta').innerHTML = `Data base: <strong>${inv.data}</strong><br>Inventário: ${inv.rows.length} registros`;
+
+  renderAll();
+}
+
+// ══════════════════════════════════════════════
+//  RENDER ALL
+// ══════════════════════════════════════════════
+function renderAll() {
+  buildFilters();
+  renderEstoque();
+  renderMovimentacao();
+  renderVendas();
+  renderSeguranca();
+  renderPedidos();
+}
+
+// ══════════════════════════════════════════════
+//  FILTERS
+// ══════════════════════════════════════════════
+function buildFilters() {
+  const tabs = ['estoque','mov','vendas','pedidos'];
+  tabs.forEach(tab => {
+    const el = document.getElementById(`filters-${tab}`);
+    el.innerHTML = '';
+    const allBtn = document.createElement('button');
+    allBtn.className = `btn-filter ${STATE.filtroEmpresa === 'TODAS' ? 'active' : ''}`;
+    allBtn.textContent = 'TODAS';
+    allBtn.onclick = () => { STATE.filtroEmpresa = 'TODAS'; buildFilters(); renderEstoque(); renderMovimentacao(); renderVendas(); renderPedidos(); };
+    el.appendChild(allBtn);
+    Object.entries(EMPRESAS).forEach(([id, nome]) => {
+      const btn = document.createElement('button');
+      btn.className = `btn-filter ${STATE.filtroEmpresa === id ? 'active' : ''}`;
+      btn.textContent = nome;
+      btn.onclick = () => { STATE.filtroEmpresa = id; buildFilters(); renderEstoque(); renderMovimentacao(); renderVendas(); renderPedidos(); };
+      el.appendChild(btn);
+    });
+  });
+}
+
+function filteredRows(rows) {
+  if (STATE.filtroEmpresa === 'TODAS') return rows;
+  return rows.filter(r => r.empr === STATE.filtroEmpresa);
+}
+
+// ══════════════════════════════════════════════
+//  ESTOQUE ATUAL
+// ══════════════════════════════════════════════
+function renderEstoque() {
+  const rows = filteredRows(STATE.semanaAtual.rows);
+  document.getElementById('sub-estoque').textContent = `Data de referência: ${STATE.semanaAtual.data}`;
+
+  // Categories
+  const oculos = rows.filter(r => r.subsetor.includes('OCULOS') || r.subsetor === '1-OCULOS');
+  const relogios = rows.filter(r => r.subsetor.includes('RELOGIO') || r.subsetor === '3-RELOGIOS');
+  const grau = rows.filter(r => r.subsetor.includes('GRAU') || r.subsetor === '22-GRAU' || r.subsetor.includes('MULTI') || r.subsetor === '25-MULTI LENTE');
+  const grauOnly = rows.filter(r => r.subsetor.includes('GRAU') || r.subsetor === '22-GRAU');
+  const multiOnly = rows.filter(r => r.subsetor.includes('MULTI') || r.subsetor === '25-MULTI LENTE');
+  const acess = rows.filter(r => r.subsetor.includes('ACESSO') || r.subsetor === '2-ACESSORIOS');
+
+  const totalPecas = oculos.reduce((a,r)=>a+r.saldo,0) + relogios.reduce((a,r)=>a+r.saldo,0);
+  const totalValor = rows.reduce((a,r)=>a+(r.custo*r.saldo),0);
+
+  const el = document.getElementById('content-estoque');
+  el.innerHTML = '';
+
+  // KPIs
+  const kpi = document.createElement('div');
+  kpi.className = 'grid-4';
+  kpi.style.marginBottom='24px';
+  kpi.innerHTML = `
+    <div class="stat-card"><div class="stat-label">Total Óculos</div><div class="stat-value" style="color:var(--accent)">${sumSaldo(oculos).toLocaleString('pt-BR')}</div><div class="stat-sub">peças em estoque</div></div>
+    <div class="stat-card"><div class="stat-label">Total Relógios</div><div class="stat-value" style="color:var(--accent2)">${sumSaldo(relogios).toLocaleString('pt-BR')}</div><div class="stat-sub">peças em estoque</div></div>
+    <div class="stat-card"><div class="stat-label">Grau + Multi Lente</div><div class="stat-value" style="color:var(--accent3)">${sumSaldo(grau).toLocaleString('pt-BR')}</div><div class="stat-sub">${sumSaldo(grauOnly)} grau + ${sumSaldo(multiOnly)} multi</div></div>
+    <div class="stat-card"><div class="stat-label">Valor em Estoque</div><div class="stat-value" style="color:var(--green)">R$${(totalValor/1000).toFixed(0)}k</div><div class="stat-sub">custo total estimado</div></div>
+  `;
+  el.appendChild(kpi);
+
+  // Óculos por faixa
+  el.appendChild(buildBandSection('Óculos por Faixa de Preço', oculos, BANDS_OC, 'custo', '1'));
+  el.appendChild(buildBandSection('Relógios por Faixa de Preço', relogios, BANDS_REL, 'custo', '2'));
+  el.appendChild(buildBandSection('Grau + Multi Lente por Faixa', grau, BANDS_GRAU, 'custo', '3'));
+  el.appendChild(buildAcessoriosSection(acess));
+}
+
+function sumSaldo(rows) {
+  return rows.reduce((a,r)=>a+r.saldo,0);
+}
+
+function buildBandSection(title, rows, bands, priceField, colorIdx) {
+  const colors = ['var(--accent)','var(--accent2)','var(--accent3)'];
+  const color = colors[(parseInt(colorIdx)-1)%colors.length];
+  const section = document.createElement('div');
+  section.className = 'section';
+
+  const header = document.createElement('div');
+  header.className = 'section-header';
+  header.innerHTML = `<h2>${title}</h2><span>${sumSaldo(rows)} peças total</span>`;
+  header.querySelector('h2').style.borderColor = color;
+  section.appendChild(header);
+
+  const wrap = document.createElement('div');
+  wrap.className = 'scroll-x';
+  const empresaIds = STATE.filtroEmpresa === 'TODAS' ? Object.keys(EMPRESAS) : [STATE.filtroEmpresa];
+
+  let html = `<table class="band-table"><thead><tr>
+    <th>Faixa</th><th>Preço</th>`;
+  empresaIds.forEach(id => { html += `<th>${EMPRESAS[id]||id}</th>`; });
+  html += `<th>TOTAL</th><th>% do Total</th></tr></thead><tbody>`;
+
+  const totalGeral = sumSaldo(rows);
+  bands.forEach(b => {
+    const inBand = rows.filter(r => r[priceField] >= b.min && r[priceField] <= b.max);
+    const total = sumSaldo(inBand);
+    const pct = totalGeral ? ((total/totalGeral)*100).toFixed(1) : '0.0';
+    html += `<tr><td><span class="band-label band-${b.key}">${b.key}</span></td><td style="color:var(--muted)">${b.label}</td>`;
+    empresaIds.forEach(id => {
+      const v = sumSaldo(inBand.filter(r => r.empr === id));
+      html += `<td>${v > 0 ? v : '<span style="color:var(--border)">—</span>'}</td>`;
+    });
+    html += `<td style="font-weight:700">${total}</td><td style="color:${color}">${pct}%</td></tr>`;
+  });
+
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+  section.appendChild(wrap);
+  return section;
+}
+
+function buildAcessoriosSection(rows) {
+  const section = document.createElement('div');
+  section.className = 'section';
+  const header = document.createElement('div');
+  header.className = 'section-header';
+  header.innerHTML = `<h2>Acessórios por Tipo</h2><span>${sumSaldo(rows)} itens</span>`;
+  section.appendChild(header);
+
+  // Group by prefix of ref (AC.XX)
+  const types = {};
+  rows.forEach(r => {
+    const parts = r.ref.split('.');
+    const tipo = parts.length >= 2 ? `${parts[0]}.${parts[1]}` : r.ref;
+    const tipLabel = getTipoLabel(tipo);
+    if (!types[tipLabel]) types[tipLabel] = 0;
+    types[tipLabel] += r.saldo;
+  });
+
+  const grid = document.createElement('div');
+  grid.className = 'ac-grid';
+  Object.entries(types).sort((a,b)=>b[1]-a[1]).forEach(([tipo, cnt]) => {
+    grid.innerHTML += `<div class="ac-card"><div class="ac-type">Tipo</div><div class="ac-count">${cnt}</div><div class="ac-label">${tipo}</div></div>`;
+  });
+  section.appendChild(grid);
+  return section;
+}
+
+function getTipoLabel(prefix) {
+  const map = {
+    'AC.LI': 'Limpeza / Cuidados', 'AC.CA': 'Camisetas / Uniformes',
+    'AC.ES': 'Estojos', 'AC.CO': 'Cordões', 'AC.PA': 'Panos',
+    'AC.CH': 'Chaves / Parafusos', 'AC.BO': 'Bolsas', 'AC.RE': 'Reparo',
+  };
+  return map[prefix] || prefix;
+}
+
+// ══════════════════════════════════════════════
+//  MOVIMENTAÇÃO
+// ══════════════════════════════════════════════
+function updateSemanaSelects() {
+  const keys = Object.keys(STATE.inventarios);
+  ['sel-semana-ant','sel-semana-at'].forEach(id => {
+    const sel = document.getElementById(id);
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">— selecionar —</option>';
+    keys.forEach(k => {
+      sel.innerHTML += `<option value="${k}" ${k===cur?'selected':''}>${k}</option>`;
+    });
+  });
+  if (keys.length >= 1) {
+    document.getElementById('sel-semana-at').value = keys[keys.length-1];
+  }
+}
+
+function renderMovimentacao() {
+  const keyAnt = document.getElementById('sel-semana-ant').value;
+  const keyAt = document.getElementById('sel-semana-at').value;
+  const el = document.getElementById('content-mov');
+  const info = document.getElementById('mov-info');
+
+  if (!keyAt) { el.innerHTML = ''; return; }
+
+  if (!keyAnt) {
+    info.textContent = 'Selecione a semana anterior para comparação. Você pode carregar um segundo arquivo de inventário para comparar.';
+    el.innerHTML = '';
+    return;
+  }
+
+  info.style.display = 'none';
+
+  const rowsAnt = filteredRows(STATE.inventarios[keyAnt]);
+  const rowsAt = filteredRows(STATE.inventarios[keyAt]);
+
+  // Build comparison by subsetor + empr + ref
+  const catMap = {
+    '1-OCULOS': 'OCULOS', '3-RELOGIOS': 'RELOGIOS',
+    '22-GRAU': 'GRAU', '25-MULTI LENTE': 'MULTI LENTE',
+  };
+
+  const relevantSubs = Object.keys(catMap);
+
+  // Group anterior
+  const mapAnt = {};
+  rowsAnt.forEach(r => {
+    if (!relevantSubs.includes(r.subsetor)) return;
+    const key = `${r.subsetor}|${r.empr}|${r.ref}`;
+    mapAnt[key] = (mapAnt[key]||0) + r.saldo;
+  });
+
+  const mapAt = {};
+  rowsAt.forEach(r => {
+    if (!relevantSubs.includes(r.subsetor)) return;
+    const key = `${r.subsetor}|${r.empr}|${r.ref}`;
+    mapAt[key] = (mapAt[key]||0) + r.saldo;
+  });
+
+  // Aggregate by subsetor + banda de preço
+  const bands_map = { '1-OCULOS': BANDS_OC, '3-RELOGIOS': BANDS_REL, '22-GRAU': BANDS_GRAU, '25-MULTI LENTE': BANDS_GRAU };
+
+  // Build summary by cat + band
+  const summary = {};
+  relevantSubs.forEach(sub => {
+    summary[sub] = {};
+    const bands = bands_map[sub];
+    bands.forEach(b => {
+      summary[sub][b.key] = { label: b.label, ant: 0, at: 0 };
+    });
+  });
+
+  // Get custo for ref from current week
+  const custoRef = {};
+  STATE.semanaAtual.rows.forEach(r => { custoRef[r.ref] = r.custo; });
+
+  const allKeys = new Set([...Object.keys(mapAnt), ...Object.keys(mapAt)]);
+  allKeys.forEach(k => {
+    const [sub, empr, ref] = k.split('|');
+    if (!relevantSubs.includes(sub)) return;
+    const custo = custoRef[ref] || 0;
+    const bands = bands_map[sub];
+    const band = bands.find(b => custo >= b.min && custo <= b.max);
+    if (!band) return;
+    if (!summary[sub][band.key]) return;
+    summary[sub][band.key].ant += mapAnt[k] || 0;
+    summary[sub][band.key].at += mapAt[k] || 0;
+  });
+
+  el.innerHTML = '';
+  const grid = document.createElement('div');
+  grid.className = 'grid-2';
+
+  Object.entries(summary).forEach(([sub, bands]) => {
+    const section = document.createElement('div');
+    section.className = 'section';
+    const catName = catMap[sub];
+    const totalAnt = Object.values(bands).reduce((a,b)=>a+b.ant,0);
+    const totalAt = Object.values(bands).reduce((a,b)=>a+b.at,0);
+    const delta = totalAt - totalAnt;
+
+    section.innerHTML = `
+      <div class="section-header"><h2>${catName}</h2></div>
+      <div class="scroll-x">
+      <table class="band-table">
+        <thead><tr><th>Faixa</th><th>Anterior</th><th>Atual</th><th>Recebido</th><th>Vendido</th><th>Saldo</th></tr></thead>
+        <tbody>
+        ${Object.entries(bands).map(([bk, b]) => {
+          const diff = b.at - b.ant;
+          const vendido = diff < 0 ? Math.abs(diff) : 0;
+          const recebido = diff > 0 ? diff : 0;
+          return `<tr>
+            <td><span class="band-label band-${bk}">${bk}</span><span style="color:var(--muted);font-size:0.7rem;margin-left:6px">${b.label}</span></td>
+            <td>${b.ant}</td>
+            <td>${b.at}</td>
+            <td class="${recebido>0?'num-pos':'num-zero'}">${recebido>0?'+'+recebido:'—'}</td>
+            <td class="${vendido>0?'num-neg':'num-zero'}">${vendido>0?'-'+vendido:'—'}</td>
+            <td class="${diff>0?'num-pos':diff<0?'num-neg':'num-zero'}" style="font-weight:700">${diff>0?'+'+diff:diff}</td>
+          </tr>`;
+        }).join('')}
+        <tr style="border-top:1px solid var(--border)">
+          <td style="font-weight:700">TOTAL</td>
+          <td>${totalAnt}</td><td>${totalAt}</td>
+          <td></td><td></td>
+          <td class="${delta>0?'num-pos':delta<0?'num-neg':'num-zero'}" style="font-weight:700">${delta>0?'+'+delta:delta}</td>
+        </tr>
+        </tbody>
+      </table></div>`;
+    grid.appendChild(section);
+  });
+
+  el.appendChild(grid);
+
+  // Add upload for second week
+  const uploadSecond = document.createElement('div');
+  uploadSecond.style.cssText = 'margin-top:24px; padding:16px; border:1px dashed var(--border); border-radius:8px; text-align:center; position:relative;';
+  uploadSecond.innerHTML = `
+    <p style="color:var(--muted); font-size:0.78rem; margin-bottom:8px">Carregue mais uma semana de inventário para comparação histórica</p>
+    <button class="btn-save" onclick="document.getElementById('file-inv2').click()" style="background:var(--accent3)">+ CARREGAR SEMANA ANTERIOR</button>
+    <input type="file" id="file-inv2" accept=".csv" style="display:none">
+  `;
+  el.appendChild(uploadSecond);
+  document.getElementById('file-inv2').addEventListener('change', function(e) {
+    const f = e.target.files[0];
+    if (!f) return;
+    const r = new FileReader();
+    r.onload = (ev) => {
+      const inv = parseInventario(ev.target.result);
+      const key = inv.data || `semana_${Object.keys(STATE.inventarios).length}`;
+      STATE.inventarios[key] = inv.rows;
+      updateSemanaSelects();
+    };
+    r.readAsText(f, 'latin1');
+  });
+}
+
+// ══════════════════════════════════════════════
+//  VENDAS / CURVA
+// ══════════════════════════════════════════════
+function renderVendas() {
+  const el = document.getElementById('content-vendas');
+  el.innerHTML = '';
+
+  const emprFilter = STATE.filtroEmpresa;
+  let vendidos = STATE.vendidos;
+  if (emprFilter !== 'TODAS') vendidos = vendidos.filter(v => v.empr === emprFilter);
+
+  const grupos = ['OCULOS','RELOGIOS','GRAU','MULTI LENTE'];
+  const bandsMaps = { OCULOS: BANDS_OC, RELOGIOS: BANDS_REL, GRAU: BANDS_GRAU, 'MULTI LENTE': BANDS_GRAU };
+
+  // Summary cards
+  const kpi = document.createElement('div');
+  kpi.className = 'grid-4';
+  kpi.style.marginBottom = '28px';
+  grupos.forEach(g => {
+    const gRows = vendidos.filter(v => v.grupo === g);
+    const total = gRows.reduce((a,r)=>a+r.qty,0);
+    const faturamento = gRows.reduce((a,r)=>a+(r.prVenda*r.qty),0);
+    kpi.innerHTML += `<div class="stat-card">
+      <div class="stat-label">${g}</div>
+      <div class="stat-value">${total.toLocaleString('pt-BR')}</div>
+      <div class="stat-sub">R$${(faturamento/1000).toFixed(1)}k faturado</div>
+    </div>`;
+  });
+  el.appendChild(kpi);
+
+  // Tabela por grupo + faixa
+  grupos.forEach(g => {
+    if (g === 'MULTI LENTE' && vendidos.filter(v=>v.grupo===g).length === 0) return;
+    const gRows = vendidos.filter(v => v.grupo === g);
+    const bands = bandsMaps[g];
+
+    const section = document.createElement('div');
+    section.className = 'section';
+    section.innerHTML = `<div class="section-header"><h2>${g}</h2><span>${gRows.reduce((a,r)=>a+r.qty,0)} unidades vendidas</span></div>`;
+
+    const empresaIds = emprFilter === 'TODAS' ? Object.keys(EMPRESAS) : [emprFilter];
+    let html = `<div class="scroll-x"><table class="band-table"><thead><tr><th>Faixa</th><th>Preço Venda</th>`;
+    empresaIds.forEach(id => { html += `<th>${EMPRESAS[id]||id}</th>`; });
+    html += `<th>TOTAL</th><th>Ticket Médio</th></tr></thead><tbody>`;
+
+    const totalGeral = gRows.reduce((a,r)=>a+r.qty,0);
+    bands.forEach(b => {
+      const inBand = gRows.filter(r => r.prVenda >= b.min && r.prVenda <= b.max);
+      const total = inBand.reduce((a,r)=>a+r.qty,0);
+      const totalFat = inBand.reduce((a,r)=>a+(r.prVenda*r.qty),0);
+      const ticket = total > 0 ? totalFat/total : 0;
+      html += `<tr><td><span class="band-label band-${b.key}">${b.key}</span></td><td style="color:var(--muted)">${b.label}</td>`;
+      empresaIds.forEach(id => {
+        const v = inBand.filter(r=>r.empr===id).reduce((a,r)=>a+r.qty,0);
+        html += `<td>${v > 0 ? v : '<span style="color:var(--border)">—</span>'}</td>`;
+      });
+      html += `<td style="font-weight:700">${total}</td><td style="color:var(--accent2)">R$${ticket.toFixed(0)}</td></tr>`;
+    });
+
+    html += `</tbody></table></div>`;
+    section.innerHTML += html;
+    el.appendChild(section);
+  });
+
+  // Bar chart por empresa
+  const section2 = document.createElement('div');
+  section2.className = 'section';
+  section2.innerHTML = `<div class="section-header"><h2>Distribuição de Vendas por Loja</h2></div>`;
+
+  const empresaIds = emprFilter === 'TODAS' ? Object.keys(EMPRESAS) : [emprFilter];
+  const totaisPorEmpresa = empresaIds.map(id => ({
+    id, nome: EMPRESAS[id], total: vendidos.filter(v=>v.empr===id).reduce((a,r)=>a+r.qty,0)
+  })).sort((a,b)=>b.total-a.total);
+  const maxV = Math.max(...totaisPorEmpresa.map(e=>e.total));
+
+  const barChart = document.createElement('div');
+  barChart.className = 'bar-chart';
+  totaisPorEmpresa.forEach(e => {
+    const pct = maxV ? (e.total/maxV*100) : 0;
+    barChart.innerHTML += `<div class="bar-row">
+      <div class="bar-row-label">${e.nome}</div>
+      <div class="bar-track"><div class="bar-fill bar-acum" style="width:${pct}%"></div><span class="bar-val">${e.total}</span></div>
+    </div>`;
+  });
+
+  section2.appendChild(barChart);
+  el.appendChild(section2);
+}
+
+// ══════════════════════════════════════════════
+//  SAFETY STOCK
+// ══════════════════════════════════════════════
+function initSafetyStock() {
+  if (Object.keys(STATE.safetyStock).length > 0) return;
+  const cats = [
+    { cat: 'OCULOS', bands: BANDS_OC },
+    { cat: 'RELOGIOS', bands: BANDS_REL },
+    { cat: 'GRAU', bands: BANDS_GRAU },
+    { cat: 'MULTI LENTE', bands: BANDS_GRAU },
+  ];
+  Object.keys(EMPRESAS).forEach(empr => {
+    cats.forEach(({ cat, bands }) => {
+      bands.forEach(b => {
+        const key = `${empr}|${cat}|${b.key}`;
+        // Default: based on weekly avg sales
+        const vendSemana = calcVendaSemanalMedia(empr, cat, b);
+        STATE.safetyStock[key] = Math.max(2, Math.round(vendSemana * 2));
+      });
+    });
+  });
+}
+
+function calcVendaSemanalMedia(empr, cat, band) {
+  const grupoCat = cat;
+  const bands_map = { OCULOS: BANDS_OC, RELOGIOS: BANDS_REL, GRAU: BANDS_GRAU, 'MULTI LENTE': BANDS_GRAU };
+  const rows = STATE.vendidos.filter(v =>
+    v.grupo === grupoCat &&
+    v.empr === empr &&
+    v.prVenda >= band.min && v.prVenda <= band.max
+  );
+  const total = rows.reduce((a,r)=>a+r.qty,0);
+  // Period: ~13 months from header (aproximado)
+  const semanas = 52;
+  return total / semanas;
+}
+
+function renderSeguranca() {
+  const el = document.getElementById('content-seguranca');
+  el.innerHTML = '';
+
+  const cats = [
+    { cat: 'OCULOS', bands: BANDS_OC, label: 'Óculos' },
+    { cat: 'RELOGIOS', bands: BANDS_REL, label: 'Relógios' },
+    { cat: 'GRAU', bands: BANDS_GRAU, label: 'Grau' },
+    { cat: 'MULTI LENTE', bands: BANDS_GRAU, label: 'Multi Lente' },
+  ];
+
+  cats.forEach(({ cat, bands, label }) => {
+    const section = document.createElement('div');
+    section.className = 'section';
+    section.innerHTML = `<div class="section-header"><h2>${label}</h2><span>mínimo por loja</span></div>`;
+
+    let html = `<div class="scroll-x"><table class="ss-table"><thead><tr><th>Faixa</th><th>Preço</th>`;
+    Object.entries(EMPRESAS).forEach(([id, nome]) => { html += `<th>${nome}</th>`; });
+    html += `</tr></thead><tbody>`;
+
+    bands.forEach(b => {
+      html += `<tr><td><span class="band-label band-${b.key}">${b.key}</span></td><td style="color:var(--muted);font-size:0.75rem">${b.label}</td>`;
+      Object.keys(EMPRESAS).forEach(empr => {
+        const key = `${empr}|${cat}|${b.key}`;
+        const val = STATE.safetyStock[key] || 0;
+        html += `<td><input class="ss-input" type="number" min="0" data-key="${key}" value="${val}" oninput="STATE.safetyStock[this.dataset.key]=parseInt(this.value)||0; renderPedidos();"></td>`;
+      });
+      html += '</tr>';
+    });
+
+    html += '</tbody></table></div>';
+    section.innerHTML += html;
+
+    const saveBtn = document.createElement('div');
+    saveBtn.style.marginTop = '10px';
+    saveBtn.innerHTML = `<button class="btn-save" onclick="saveAndNotify(this)">Salvar Estoque de Segurança</button>`;
+    section.appendChild(saveBtn);
+    el.appendChild(section);
+  });
+
+  // Auto-ajuste baseado na curva
+  const autoSection = document.createElement('div');
+  autoSection.className = 'section';
+  autoSection.innerHTML = `
+    <div class="section-header"><h2>Ajuste Automático por Sazonalidade</h2></div>
+    <div class="info-box" style="margin-bottom:12px">
+      O sistema usa as vendas históricas para calcular a média semanal e sugere um estoque de segurança de 2× a venda semanal média por faixa/loja. Clique para aplicar.
+    </div>
+    <button class="btn-save" style="background:var(--accent3)" onclick="autoAdjustSS()">⚡ APLICAR AJUSTE AUTOMÁTICO</button>
+  `;
+  el.appendChild(autoSection);
+}
+
+function saveAndNotify(btn) {
+  btn.textContent = '✓ Salvo!';
+  btn.style.background = 'var(--green)';
+  setTimeout(() => { btn.textContent = 'Salvar Estoque de Segurança'; btn.style.background = 'var(--accent)'; }, 2000);
+  renderPedidos();
+}
+
+function autoAdjustSS() {
+  const cats = [
+    { cat: 'OCULOS', bands: BANDS_OC },
+    { cat: 'RELOGIOS', bands: BANDS_REL },
+    { cat: 'GRAU', bands: BANDS_GRAU },
+    { cat: 'MULTI LENTE', bands: BANDS_GRAU },
+  ];
+  Object.keys(EMPRESAS).forEach(empr => {
+    cats.forEach(({ cat, bands }) => {
+      bands.forEach(b => {
+        const key = `${empr}|${cat}|${b.key}`;
+        const vendSemana = calcVendaSemanalMedia(empr, cat, b);
+        STATE.safetyStock[key] = Math.max(1, Math.round(vendSemana * 2));
+      });
+    });
+  });
+  renderSeguranca();
+  renderPedidos();
+}
+
+// ══════════════════════════════════════════════
+//  PEDIDOS SUGERIDOS
+// ══════════════════════════════════════════════
+function renderPedidos() {
+  const el = document.getElementById('content-pedidos');
+  el.innerHTML = '';
+
+  const emprFilter = STATE.filtroEmpresa;
+  const empresaIds = emprFilter === 'TODAS' ? Object.keys(EMPRESAS) : [emprFilter];
+
+  const cats = [
+    { cat: 'OCULOS', sub: '1-OCULOS', bands: BANDS_OC, label: 'Óculos' },
+    { cat: 'RELOGIOS', sub: '3-RELOGIOS', bands: BANDS_REL, label: 'Relógios' },
+    { cat: 'GRAU', sub: '22-GRAU', bands: BANDS_GRAU, label: 'Grau' },
+    { cat: 'MULTI LENTE', sub: '25-MULTI LENTE', bands: BANDS_GRAU, label: 'Multi Lente' },
+  ];
+
+  // Get current stock
+  const estoque = {};
+  STATE.semanaAtual.rows.forEach(r => {
+    const cat = getSubsetorCat(r.subsetor);
+    if (!cat) return;
+    const bands = cat === 'OCULOS' ? BANDS_OC : cat === 'RELOGIOS' ? BANDS_REL : BANDS_GRAU;
+    const band = bands.find(b => r.custo >= b.min && r.custo <= b.max);
+    if (!band) return;
+    const key = `${r.empr}|${cat}|${band.key}`;
+    estoque[key] = (estoque[key]||0) + r.saldo;
+  });
+
+  cats.forEach(({ cat, bands, label }) => {
+    const section = document.createElement('div');
+    section.className = 'section';
+    section.innerHTML = `<div class="section-header"><h2>${label} — Pedido Sugerido</h2></div>`;
+
+    let html = `<div class="scroll-x"><table class="order-table"><thead><tr>
+      <th>Loja</th><th>Faixa</th><th>Estoque Atual</th><th>Segurança</th><th>Venda/Sem. (méd.)</th><th>Pedido</th><th>Status</th>
+    </tr></thead><tbody>`;
+
+    let hasAnyNeed = false;
+
+    empresaIds.forEach(empr => {
+      bands.forEach(b => {
+        const stockKey = `${empr}|${cat}|${b.key}`;
+        const ssKey = stockKey;
+        const atual = estoque[stockKey] || 0;
+        const ss = STATE.safetyStock[ssKey] || 0;
+        const vendSem = calcVendaSemanalMedia(empr, cat, b).toFixed(1);
+        const needed = Math.max(0, ss - atual);
+        if (needed > 0) hasAnyNeed = true;
+
+        html += `<tr>
+          <td style="font-size:0.75rem">${EMPRESAS[empr]||empr}</td>
+          <td><span class="band-label band-${b.key}">${b.key}</span><span style="color:var(--muted);font-size:0.7rem;margin-left:6px">${b.label}</span></td>
+          <td>${atual}</td>
+          <td>${ss}</td>
+          <td style="color:var(--muted)">${vendSem}</td>
+          <td style="font-weight:700;font-size:1rem">${needed > 0 ? needed : '—'}</td>
+          <td><span class="need-chip ${needed>0?'need-yes':'need-no'}">${needed>0?'⚠ REPOR':'OK'}</span></td>
+        </tr>`;
+      });
+    });
+
+    if (!hasAnyNeed) {
+      html += `<tr><td colspan="7" style="text-align:center;color:var(--green);padding:20px">✓ Estoque acima do mínimo para todas as faixas</td></tr>`;
+    }
+
+    html += '</tbody></table></div>';
+    section.innerHTML += html;
+    el.appendChild(section);
+  });
+}
+
+function getSubsetorCat(sub) {
+  if (sub === '1-OCULOS') return 'OCULOS';
+  if (sub === '3-RELOGIOS') return 'RELOGIOS';
+  if (sub === '22-GRAU') return 'GRAU';
+  if (sub === '25-MULTI LENTE') return 'MULTI LENTE';
+  return null;
+}
+
+// ══════════════════════════════════════════════
+//  TABS
+// ══════════════════════════════════════════════
+function showTab(id) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.currentTarget.classList.add('active');
+}
+</script>
+</body>
+</html>
