@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Estoque — Grupo Kuhn</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --bg: #f4f4f4;
+  --white: #ffffff;
+  --border: #e2e2e2;
+  --text: #111111;
+  --muted: #888888;
+  --light: #fafafa;
+  --c1:  #1a6fb0;
+  --c16: #2e7d32;
+  --c17: #6a1fb0;
+  --c18: #b05a1a;
+  --c19: #1a8f8f;
+  --c20: #c0392b;
+  --c21: #7d5c1a;
+  --ok:    #2e7d32;
+  --warn:  #e65100;
+  --danger:#c0392b;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); font-size:13px; line-height:1.5; }
+
+/* HEADER */
+header { background:var(--white); border-bottom:1px solid var(--border); padding:11px 24px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; }
+.logo { font-weight:700; font-size:14px; }
+.logo em { font-style:normal; color:var(--muted); font-weight:400; font-size:12px; margin-left:8px; }
+#hdr-meta { font-size:11px; color:var(--muted); text-align:right; }
+#hdr-meta strong { color:var(--text); font-weight:600; }
+
+/* UPLOAD */
+#upload-wrap { max-width:640px; margin:56px auto; background:var(--white); border:1px solid var(--border); border-radius:8px; padding:32px 36px; }
+#upload-wrap h1 { font-size:17px; font-weight:700; margin-bottom:4px; }
+.sub { color:var(--muted); font-size:12px; margin-bottom:24px; }
+.upload-row { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:18px; }
+.uc { flex:1; min-width:190px; border:1.5px dashed var(--border); border-radius:6px; padding:16px 18px; cursor:pointer; position:relative; transition:border-color .15s; }
+.uc:hover { border-color:#999; }
+.uc.ok { border-color:var(--ok); border-style:solid; }
+.uc input[type=file] { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+.uc-lbl { font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin-bottom:4px; }
+.uc.ok .uc-lbl { color:var(--ok); }
+.uc-name { font-size:12px; font-weight:600; margin-bottom:2px; }
+.uc-hint { font-size:11px; color:var(--muted); }
+.btn-main { background:var(--text); color:var(--white); border:none; padding:10px 22px; font-family:'Inter',sans-serif; font-size:13px; font-weight:600; border-radius:5px; cursor:pointer; transition:opacity .15s; }
+.btn-main:disabled { opacity:.3; cursor:default; }
+.btn-main:not(:disabled):hover { opacity:.75; }
+#err-msg { display:none; background:#fff5f5; border:1px solid #fecaca; border-radius:5px; padding:10px 14px; font-size:12px; color:var(--danger); margin-top:12px; }
+
+/* TABS */
+#app { display:none; }
+.tabs { background:var(--white); border-bottom:1px solid var(--border); display:flex; padding:0 24px; position:sticky; top:46px; z-index:90; overflow-x:auto; }
+.tab { padding:11px 14px; font-size:12px; font-weight:500; color:var(--muted); cursor:pointer; border-bottom:2px solid transparent; white-space:nowrap; transition:color .1s,border-color .1s; }
+.tab:hover { color:var(--text); }
+.tab.on { color:var(--text); font-weight:600; border-bottom-color:var(--text); }
+
+/* PAGE */
+.page { display:none; padding:22px 24px; }
+.page.on { display:block; }
+.ptitle { font-size:16px; font-weight:700; margin-bottom:3px; }
+.psub { font-size:11px; color:var(--muted); margin-bottom:18px; }
+
+/* FILTER */
+.fbar { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:16px; }
+.fbar .fl { font-size:11px; color:var(--muted); font-weight:600; }
+.fbtn { padding:4px 10px; border-radius:20px; border:1px solid var(--border); background:var(--white); font-family:'Inter',sans-serif; font-size:11px; font-weight:500; color:var(--muted); cursor:pointer; transition:all .1s; }
+.fbtn:hover { border-color:#888; color:var(--text); }
+.fbtn.on { background:var(--text); color:var(--white); border-color:var(--text); }
+.fbtn[data-e="1"].on  { background:var(--c1);  border-color:var(--c1);  }
+.fbtn[data-e="16"].on { background:var(--c16); border-color:var(--c16); }
+.fbtn[data-e="17"].on { background:var(--c17); border-color:var(--c17); }
+.fbtn[data-e="18"].on { background:var(--c18); border-color:var(--c18); }
+.fbtn[data-e="19"].on { background:var(--c19); border-color:var(--c19); }
+.fbtn[data-e="20"].on { background:var(--c20); border-color:var(--c20); }
+.fbtn[data-e="21"].on { background:var(--c21); border-color:var(--c21); }
+
+/* CARD */
+.card { background:var(--white); border:1px solid var(--border); border-radius:6px; overflow:hidden; margin-bottom:14px; }
+.ch { padding:10px 14px; border-bottom:1px solid var(--border); background:var(--light); display:flex; align-items:baseline; gap:8px; }
+.ch h3 { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; }
+.ch-s { font-size:11px; color:var(--muted); }
+.sx { overflow-x:auto; }
+
+/* KPI */
+.krow { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:14px; }
+@media(max-width:760px){ .krow{grid-template-columns:1fr 1fr;} }
+.kpi { background:var(--white); border:1px solid var(--border); border-radius:6px; padding:13px 15px; }
+.kl { font-size:10px; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); font-weight:600; margin-bottom:5px; }
+.kv { font-size:22px; font-weight:700; line-height:1; }
+.ks { font-size:10px; color:var(--muted); margin-top:3px; }
+
+/* TABLE */
+.t { width:100%; border-collapse:collapse; }
+.t th { font-size:10px; text-transform:uppercase; letter-spacing:.06em; font-weight:600; color:var(--muted); padding:7px 12px; text-align:left; border-bottom:1px solid var(--border); white-space:nowrap; }
+.t td { padding:7px 12px; border-bottom:1px solid var(--border); font-size:12px; }
+.t tr:last-child td { border-bottom:none; }
+.t tr:hover td { background:#fafafa; }
+.r { text-align:right; font-variant-numeric:tabular-nums; }
+.b { font-weight:600; }
+.mu { color:var(--muted); }
+.pl { color:var(--ok); font-weight:600; }
+.mi { color:var(--danger); font-weight:600; }
+
+/* BAND CHIP */
+.bc { display:inline-block; padding:1px 6px; border-radius:3px; font-size:10px; font-weight:700; letter-spacing:.03em; }
+.A { background:#e8f5e9; color:#2e7d32; }
+.B { background:#e3f2fd; color:#1565c0; }
+.C { background:#fff3e0; color:#e65100; }
+.D { background:#fce4ec; color:#b71c1c; }
+.E { background:#f3e5f5; color:#6a1fb0; }
+
+/* GRID */
+.g2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+@media(max-width:860px){ .g2{grid-template-columns:1fr;} }
+
+/* SS INPUT */
+.ssi { width:56px; border:1px solid var(--border); border-radius:4px; padding:4px 6px; font-family:'Inter',sans-serif; font-size:12px; text-align:center; }
+.ssi:focus { outline:none; border-color:#555; }
+
+/* BUTTONS */
+.btns { display:flex; gap:8px; margin-bottom:14px; }
+.btn { padding:7px 14px; border:1px solid var(--border); border-radius:4px; background:var(--white); font-family:'Inter',sans-serif; font-size:11px; font-weight:600; cursor:pointer; transition:all .1s; }
+.btn:hover { background:var(--text); color:var(--white); border-color:var(--text); }
+.btn.p { background:var(--text); color:var(--white); border-color:var(--text); }
+.btn.p:hover { opacity:.75; }
+
+/* MOV WEEK BAR */
+.wbar { display:flex; gap:12px; align-items:center; flex-wrap:wrap; padding:10px 14px; background:var(--white); border:1px solid var(--border); border-radius:6px; margin-bottom:16px; }
+.wbar label { font-size:11px; font-weight:600; color:var(--muted); }
+.wbar select { border:1px solid var(--border); border-radius:4px; padding:5px 8px; font-family:'Inter',sans-serif; font-size:12px; color:var(--text); background:var(--white); }
+.wbar select:focus { outline:none; border-color:#555; }
+.btn-upload2 { padding:5px 10px; border:1px dashed var(--border); border-radius:4px; background:transparent; font-family:'Inter',sans-serif; font-size:11px; font-weight:500; color:var(--muted); cursor:pointer; position:relative; }
+.btn-upload2 input[type=file] { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+.btn-upload2:hover { border-color:#777; color:var(--text); }
+
+/* ORDER CARDS */
+.ogrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:14px; }
+.ocard { background:var(--white); border:1.5px solid var(--border); border-radius:8px; overflow:hidden; break-inside:avoid; }
+.och { padding:12px 14px; display:flex; align-items:center; gap:10px; border-bottom:1px solid var(--border); }
+.obar { width:4px; height:36px; border-radius:2px; flex-shrink:0; }
+.oinfo h4 { font-size:12px; font-weight:700; }
+.oinfo span { font-size:10px; color:var(--muted); }
+.obadge { margin-left:auto; font-size:10px; font-weight:700; padding:3px 9px; border-radius:20px; white-space:nowrap; }
+.need { background:#fce4ec; color:var(--danger); }
+.allok { background:#e8f5e9; color:var(--ok); }
+.oct { width:100%; border-collapse:collapse; }
+.oct th { font-size:9px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); font-weight:600; padding:6px 13px; border-bottom:1px solid var(--border); text-align:left; }
+.oct .cath { font-size:9px; font-weight:700; letter-spacing:.06em; padding:5px 13px; border-bottom:1px solid var(--border); }
+.oct td { padding:6px 13px; border-bottom:1px solid #f2f2f2; font-size:11px; }
+.oct tr:last-of-type td { border-bottom:none; }
+.oqty { font-size:13px; font-weight:700; color:var(--danger); text-align:right; }
+.oqty.z { font-size:11px; font-weight:400; color:var(--muted); }
+.ofoot { padding:7px 13px; border-top:1px solid var(--border); background:var(--light); font-size:10px; color:var(--muted); display:flex; justify-content:space-between; }
+
+/* PRINT */
+@media print {
+  header,.tabs,.fbar,.ptitle,.psub,.no-print { display:none !important; }
+  .page { display:block !important; padding:0; }
+  #p-pedidos { display:block !important; }
+  .ogrid { grid-template-columns:1fr 1fr; }
+  body { background:#fff; }
+  .ocard { border:1px solid #ccc; page-break-inside:avoid; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">KUHN <em>Gestão de Estoque</em></div>
+  <div id="hdr-meta">Nenhum arquivo carregado</div>
+</header>
+
+<!-- UPLOAD -->
+<div id="upload-wrap">
+  <h1>Dashboard de Estoque</h1>
+  <div class="sub">Carregue os dois arquivos do sistema para começar a análise.</div>
+  <div class="upload-row">
+    <div class="uc" id="uc-inv">
+      <div class="uc-lbl" id="lb-inv">Aguardando</div>
+      <div class="uc-name">Registro de Inventário</div>
+      <div class="uc-hint">ExportacaoRegistroInventario.csv</div>
+      <input type="file" accept=".csv" id="fi-inv">
+    </div>
+    <div class="uc" id="uc-ven">
+      <div class="uc-lbl" id="lb-ven">Aguardando</div>
+      <div class="uc-name">Produtos Vendidos</div>
+      <div class="uc-hint">ProdutosServicosVendidos.csv</div>
+      <input type="file" accept=".csv" id="fi-ven">
+    </div>
+  </div>
+  <button class="btn-main" id="btn-ok" onclick="analisar()" disabled>Analisar</button>
+  <div id="err-msg"></div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="tabs">
+    <div class="tab on"  onclick="showTab('p-est',this)">Estoque Atual</div>
+    <div class="tab"     onclick="showTab('p-mov',this)">Movimentação</div>
+    <div class="tab"     onclick="showTab('p-ven',this)">Vendas</div>
+    <div class="tab"     onclick="showTab('p-seg',this)">Estoque de Segurança</div>
+    <div class="tab"     onclick="showTab('p-ped',this)">Pedidos Sugeridos</div>
+  </div>
+
+  <div class="page on" id="p-est">
+    <div class="ptitle">Estoque Atual</div>
+    <div class="psub" id="ps-est"></div>
+    <div class="fbar" id="fb-est"></div>
+    <div class="krow" id="kp-est"></div>
+    <div id="ct-est"></div>
+  </div>
+
+  <div class="page" id="p-mov">
+    <div class="ptitle">Movimentação Semanal</div>
+    <div class="psub">Recebimentos e saídas entre duas semanas</div>
+    <div class="wbar">
+      <label>Semana anterior:</label>
+      <select id="sel-ant" onchange="renderMov()"><option value="">— sem dados —</option></select>
+      <label>Semana atual:</label>
+      <select id="sel-at"  onchange="renderMov()"><option value="">— sem dados —</option></select>
+      <label class="btn-upload2">+ Semana anterior
+        <input type="file" accept=".csv" id="fi-inv2">
+      </label>
+    </div>
+    <div class="fbar" id="fb-mov"></div>
+    <div id="ct-mov"></div>
+  </div>
+
+  <div class="page" id="p-ven">
+    <div class="ptitle">Vendas por Faixa de Preço</div>
+    <div class="psub">Histórico de vendas por categoria, faixa e loja</div>
+    <div class="fbar" id="fb-ven"></div>
+    <div id="ct-ven"></div>
+  </div>
+
+  <div class="page" id="p-seg">
+    <div class="ptitle">Estoque de Segurança</div>
+    <div class="psub">Mínimo de peças por categoria, faixa e loja. Edite e salve.</div>
+    <div class="btns">
+      <button class="btn" onclick="autoSS()">⚡ Ajuste automático (2× venda/semana)</button>
+      <button class="btn p" id="btn-save-ss" onclick="saveSS()">Salvar</button>
+    </div>
+    <div id="ct-seg"></div>
+  </div>
+
+  <div class="page" id="p-ped">
+    <div class="ptitle">Pedidos Sugeridos</div>
+    <div class="psub">Quantidade a repor por loja — tire o print e envie o pedido</div>
+    <div class="fbar no-print" id="fb-ped"></div>
+    <div id="ct-ped"></div>
+  </div>
+</div>
+
+<script>
+// ─── CONSTANTES ───────────────────────────────
+const E = {
+  '1':  { n:'ALTAMIRA LJR',      c:'#1a6fb0' },
+  '16': { n:'PARAUAPEBAS LJR',   c:'#2e7d32' },
+  '17': { n:'OTICA PARAUAPEBAS', c:'#6a1fb0' },
+  '18': { n:'TAPAJOS SHOPPING',  c:'#b05a1a' },
+  '19': { n:'SHOP PARAUAPEBAS',  c:'#1a8f8f' },
+  '20': { n:'PARAISO SHOP',      c:'#c0392b' },
+  '21': { n:'OTICA TAPAJOS',     c:'#7d5c1a' },
+};
+const EK = Object.keys(E);
+
+const BND = {
+  OCULOS:  [{k:'A',l:'Até R$200',a:0,b:200},{k:'B',l:'R$201–350',a:201,b:350},{k:'C',l:'R$351–500',a:351,b:500},{k:'D',l:'R$501–700',a:501,b:700},{k:'E',l:'Acima R$700',a:701,b:9999}],
+  RELOGIOS:[{k:'A',l:'Até R$300',a:0,b:300},{k:'B',l:'R$301–500',a:301,b:500},{k:'C',l:'R$501–700',a:501,b:700},{k:'D',l:'Acima R$700',a:701,b:9999}],
+  GRAU:    [{k:'A',l:'Até R$300',a:0,b:300},{k:'B',l:'R$301–500',a:301,b:500},{k:'C',l:'R$501–700',a:501,b:700},{k:'D',l:'Acima R$700',a:701,b:9999}],
+};
+const SMAP = {'1-OCULOS':'OCULOS','3-RELOGIOS':'RELOGIOS','22-GRAU':'GRAU','25-MULTI LENTE':'GRAU'};
+const CLBL = {OCULOS:'Óculos',RELOGIOS:'Relógios',GRAU:'Grau / Multi Lente'};
+
+// ─── STATE ────────────────────────────────────
+const S = { invs:{}, sem:null, vend:[], ss:{}, f:'TODAS' };
+
+// ─── PARSE ────────────────────────────────────
+function br(s){
+  s=String(s||'').trim();
+  if(!s)return 0;
+  if(s.includes(','))s=s.replace(/\./g,'').replace(',','.');
+  return parseFloat(s)||0;
+}
+
+function parseInv(txt){
+  const ls=txt.split(/\r?\n/);
+  const rows=[]; let sub='',data='',pi=-1;
+  for(let i=0;i<20;i++){
+    const p=ls[i].split(';');
+    p.forEach(v=>{ if(v&&v.includes('baseados na data')) data=v.replace(/.*baseados na data\s*/i,'').trim(); });
+  }
+  for(let i=0;i<25;i++){
+    const p=ls[i].split(';');
+    const idx=p.findIndex(c=>/pre.o.*venda.*unit/i.test(c)||/pr\..*venda.*unit/i.test(c));
+    if(idx>=0){pi=idx;break;}
+  }
+  if(pi<0)pi=10;
+
+  // Detectar coluna Saldo pelo header
+  let si=6;
+  for(let i=0;i<25;i++){
+    const p=ls[i].split(';');
+    const idx=p.findIndex(c=>/^saldo$/i.test(c.trim())||/^qtd\.?$/i.test(c.trim()));
+    if(idx>=0){si=idx;break;}
+  }
+
+  for(let i=16;i<ls.length;i++){
+    const p=ls[i].split(';');
+    if(!p[0]&&p[1]&&/^\d+-/.test(p[1].trim()))sub=p[1].trim();
+    if(p[0]&&/^\d+$/.test(p[0].trim())){
+      // Saldo = quantidade inteira de pecas. Pegar o valor e arredondar.
+      const saldo=Math.round(br(p[si]));
+      const custo=br(p[7]);
+      const pr=pi<p.length?br(p[pi]):0;
+      rows.push({cod:p[0].trim(),ref:(p[2]||'').trim(),empr:(p[3]||'').trim(),saldo,custo,preco:pr>0?pr:custo,sub});
+    }
+  }
+  return {rows,data:data||'sem data'};
+}
+
+function parseVend(txt){
+  const ls=txt.split(/\r?\n/);
+  const rows=[]; let grp=null;
+  const GM={'OCULOS':'OCULOS','RELOGIOS':'RELOGIOS','GRAU':'GRAU','MULTI LENTE':'GRAU'};
+  for(let i=0;i<ls.length;i++){
+    const p=ls[i].split(';');
+    if(p[0].startsWith('Grupo -'))grp=GM[p[0].replace('Grupo -','').trim()]||null;
+    if(grp&&p[0]&&/^\d+$/.test(p[0].trim())){
+      const qty=br(p[5]); if(qty<=0)continue;
+      const empr=(p[4]||'').trim().split(' - ')[0].trim().split(' ')[0];
+      if(!EK.includes(empr))continue;
+      rows.push({grp,ref:(p[2]||'').trim(),empr,qty,pv:br(p[9])});
+    }
+  }
+  return rows;
+}
+
+// ─── UPLOAD ───────────────────────────────────
+let iOk=false,vOk=false,rInv=null,rVen=null;
+
+function rd(file,cb){
+  const r=new FileReader();
+  r.onload=ev=>{
+    try{cb(new TextDecoder('windows-1252').decode(ev.target.result));}
+    catch(_){const a=new Uint8Array(ev.target.result);cb(Array.from(a).map(b=>String.fromCharCode(b)).join(''));}
+  };
+  r.readAsArrayBuffer(file);
+}
+
+document.getElementById('fi-inv').addEventListener('change',e=>{
+  const f=e.target.files[0];if(!f)return;
+  rd(f,t=>{rInv=t;iOk=true;document.getElementById('uc-inv').classList.add('ok');document.getElementById('lb-inv').textContent='✓ '+f.name;chk();});
+});
+document.getElementById('fi-ven').addEventListener('change',e=>{
+  const f=e.target.files[0];if(!f)return;
+  rd(f,t=>{rVen=t;vOk=true;document.getElementById('uc-ven').classList.add('ok');document.getElementById('lb-ven').textContent='✓ '+f.name;chk();});
+});
+document.getElementById('fi-inv2').addEventListener('change',e=>{
+  const f=e.target.files[0];if(!f)return;
+  rd(f,t=>{const inv=parseInv(t);S.invs[inv.data]=inv.rows;updSel();});
+});
+
+function chk(){document.getElementById('btn-ok').disabled=!(iOk&&vOk);}
+
+function err(m){const el=document.getElementById('err-msg');el.textContent=m;el.style.display='block';}
+
+function analisar(){
+  document.getElementById('err-msg').style.display='none';
+  try{
+    const inv=parseInv(rInv);
+    if(!inv.rows.length){err('Nenhum produto encontrado. Verifique o arquivo de inventário.');return;}
+    S.sem={key:inv.data,rows:inv.rows,data:inv.data};
+    S.invs[inv.data]=inv.rows;
+    S.vend=parseVend(rVen);
+    initSS();
+    updSel();
+    document.getElementById('upload-wrap').style.display='none';
+    document.getElementById('app').style.display='block';
+    document.getElementById('hdr-meta').innerHTML=`Data base: <strong>${inv.data}</strong> &nbsp;·&nbsp; ${inv.rows.length} itens &nbsp;·&nbsp; ${S.vend.length} vendas`;
+    renderAll();
+  }catch(e){err('Erro: '+e.message);console.error(e);}
+}
+
+// ─── TABS / FILTERS ───────────────────────────
+function showTab(id,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  document.getElementById(id).classList.add('on');
+  el.classList.add('on');
+}
+
+function mkFilters(cid){
+  const el=document.getElementById(cid);
+  el.innerHTML='<span class="fl">Loja:</span>';
+  const add=(id,lbl)=>{
+    const b=document.createElement('button');
+    b.className='fbtn'+(S.f===id?' on':'');
+    b.textContent=lbl;
+    if(id!=='TODAS')b.setAttribute('data-e',id);
+    b.onclick=()=>{S.f=id;renderAll();};
+    el.appendChild(b);
+  };
+  add('TODAS','Todas');
+  EK.forEach(id=>add(id,E[id].n));
+}
+
+function fr(rows){return S.f==='TODAS'?rows:rows.filter(r=>r.empr===S.f);}
+function fv(rows){return S.f==='TODAS'?rows:rows.filter(r=>r.empr===S.f);}
+
+function renderAll(){
+  ['fb-est','fb-mov','fb-ven','fb-ped'].forEach(id=>mkFilters(id));
+  renderEst();renderMov();renderVen();renderSeg();renderPed();
+}
+
+// ─── HELPERS ──────────────────────────────────
+function ss(rows){return Math.round(rows.reduce((a,r)=>a+(r.saldo||0),0));}
+function sq(rows){return rows.reduce((a,r)=>a+r.qty,0);}
+function band(cat,p){return(BND[cat]||[]).find(b=>p>=b.a&&p<=b.b);}
+function cat(sub){return SMAP[sub]||null;}
+
+// ─── ESTOQUE ATUAL ────────────────────────────
+function renderEst(){
+  const rows=fr(S.sem.rows);
+  document.getElementById('ps-est').textContent='Referência: '+S.sem.data;
+  const bycat={};
+  rows.forEach(r=>{const c=cat(r.sub);if(c){if(!bycat[c])bycat[c]=[];bycat[c].push(r);}});
+  const oc=bycat.OCULOS||[],rl=bycat.RELOGIOS||[],gr=bycat.GRAU||[];
+  const ac=rows.filter(r=>r.sub==='2-ACESSORIOS');
+  const val=rows.reduce((a,r)=>a+(r.custo*r.saldo),0);
+  document.getElementById('kp-est').innerHTML=`
+    <div class="kpi"><div class="kl">Óculos</div><div class="kv">${ss(oc).toLocaleString('pt-BR')}</div><div class="ks">peças</div></div>
+    <div class="kpi"><div class="kl">Relógios</div><div class="kv">${ss(rl).toLocaleString('pt-BR')}</div><div class="ks">peças</div></div>
+    <div class="kpi"><div class="kl">Grau / Multi Lente</div><div class="kv">${ss(gr).toLocaleString('pt-BR')}</div><div class="ks">peças</div></div>
+    <div class="kpi"><div class="kl">Valor (custo)</div><div class="kv">R$${(val/1000).toFixed(0)}k</div><div class="ks">estimado</div></div>`;
+  const el=document.getElementById('ct-est');
+  el.innerHTML='';
+  ['OCULOS','RELOGIOS','GRAU'].forEach(c=>el.appendChild(mkBandCard(CLBL[c],bycat[c]||[],c)));
+  if(ac.length)el.appendChild(mkAcCard(ac));
+}
+
+function mkBandCard(title,rows,c){
+  const bands=BND[c];
+  const eids=S.f==='TODAS'?EK:[S.f];
+  const tot=ss(rows);
+  let th=`<tr><th>Faixa</th><th>Preço</th>`;
+  eids.forEach(id=>{th+=`<th class="r" style="color:${E[id].c}">${E[id].n}</th>`;});
+  th+=`<th class="r">Total</th><th class="r">%</th></tr>`;
+  let tb='';
+  bands.forEach(b=>{
+    const inb=rows.filter(r=>r.preco>=b.a&&r.preco<=b.b);
+    const t=ss(inb);const pct=tot?Math.round(t/tot*100):0;
+    tb+=`<tr><td><span class="bc ${b.k}">${b.k}</span></td><td class="mu">${b.l}</td>`;
+    eids.forEach(id=>{const v=ss(inb.filter(r=>r.empr===id));tb+=`<td class="r">${v||'—'}</td>`;});
+    tb+=`<td class="r b">${t}</td><td class="r mu">${pct}%</td></tr>`;
+  });
+  const d=document.createElement('div');d.className='card';
+  d.innerHTML=`<div class="ch"><h3>${title}</h3><span class="ch-s">${tot} peças</span></div><div class="sx"><table class="t"><thead>${th}</thead><tbody>${tb}</tbody></table></div>`;
+  return d;
+}
+
+function mkAcCard(rows){
+  const tp={};
+  rows.forEach(r=>{const p=r.ref.split('.');const k=p.length>=2?`${p[0]}.${p[1]}`:r.ref;tp[k]=(tp[k]||0)+r.saldo;});
+  const LB={'AC.LI':'Limpeza / Cuidados','AC.CA':'Uniformes','AC.ES':'Estojos','AC.CO':'Cordões','AC.PA':'Panos','AC.CH':'Parafusos / Chaves'};
+  let tb=Object.entries(tp).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<tr><td>${LB[k]||k}</td><td class="r b">${v}</td></tr>`).join('');
+  const d=document.createElement('div');d.className='card';
+  d.innerHTML=`<div class="ch"><h3>Acessórios por Tipo</h3><span class="ch-s">${ss(rows)} itens</span></div><div class="sx"><table class="t"><thead><tr><th>Tipo</th><th class="r">Qtd</th></tr></thead><tbody>${tb}</tbody></table></div>`;
+  return d;
+}
+
+// ─── MOVIMENTAÇÃO ─────────────────────────────
+function updSel(){
+  const keys=Object.keys(S.invs);
+  ['sel-ant','sel-at'].forEach(id=>{
+    const sel=document.getElementById(id);const cur=sel.value;
+    sel.innerHTML='<option value="">— selecionar —</option>';
+    keys.forEach(k=>sel.innerHTML+=`<option value="${k}" ${k===cur?'selected':''}>${k}</option>`);
+  });
+  if(keys.length>=1)document.getElementById('sel-at').value=keys[keys.length-1];
+}
+
+function renderMov(){
+  const ka=document.getElementById('sel-ant').value;
+  const kb=document.getElementById('sel-at').value;
+  const el=document.getElementById('ct-mov');
+  if(!ka||!kb){el.innerHTML='<div style="padding:18px;color:var(--muted);font-size:12px">Selecione duas semanas para comparar. Carregue um segundo inventário pelo botão acima.</div>';return;}
+  const ra=fr(S.invs[ka]||[]),rb=fr(S.invs[kb]||[]);
+  const pref={};S.sem.rows.forEach(r=>{pref[r.ref]=r.preco;});
+  const agg=rows=>{const m={};rows.forEach(r=>{const c=cat(r.sub);if(!BND[c])return;const pr=r.preco||pref[r.ref]||0;const b=band(c,pr);if(!b)return;const k=`${c}|${b.k}`;m[k]=(m[k]||0)+r.saldo;});return m;};
+  const ma=agg(ra),mb=agg(rb);
+  el.innerHTML='';
+  const g=document.createElement('div');g.className='g2';
+  Object.keys(CLBL).forEach(c=>{
+    const bands=BND[c];
+    let tb='';
+    bands.forEach(b=>{
+      const k=`${c}|${b.k}`;const va=ma[k]||0,vb=mb[k]||0,d=vb-va;
+      const rec=d>0?d:0,ven=d<0?Math.abs(d):0;
+      tb+=`<tr><td><span class="bc ${b.k}">${b.k}</span> <span class="mu">${b.l}</span></td><td class="r">${va}</td><td class="r">${vb}</td><td class="r ${rec>0?'pl':''}">${rec>0?'+'+rec:'—'}</td><td class="r ${ven>0?'mi':''}">${ven>0?'-'+ven:'—'}</td><td class="r b ${d>0?'pl':d<0?'mi':''}">${d>0?'+'+d:d||'—'}</td></tr>`;
+    });
+    const ta=bands.reduce((x,b)=>x+(ma[`${c}|${b.k}`]||0),0);
+    const tb2=bands.reduce((x,b)=>x+(mb[`${c}|${b.k}`]||0),0);const td=tb2-ta;
+    const card=document.createElement('div');card.className='card';
+    card.innerHTML=`<div class="ch"><h3>${CLBL[c]}</h3></div><div class="sx"><table class="t"><thead><tr><th>Faixa</th><th class="r">Anterior</th><th class="r">Atual</th><th class="r">Recebido</th><th class="r">Vendido</th><th class="r">Saldo</th></tr></thead><tbody>${tb}<tr style="border-top:2px solid var(--border)"><td class="b">Total</td><td class="r b">${ta}</td><td class="r b">${tb2}</td><td></td><td></td><td class="r b ${td>0?'pl':td<0?'mi':''}">${td>0?'+'+td:td}</td></tr></tbody></table></div>`;
+    g.appendChild(card);
+  });
+  el.appendChild(g);
+}
+
+// ─── VENDAS ───────────────────────────────────
+function renderVen(){
+  const el=document.getElementById('ct-ven');el.innerHTML='';
+  const vend=fv(S.vend);
+  const eids=S.f==='TODAS'?EK:[S.f];
+  const krow=document.createElement('div');krow.className='krow';
+  Object.keys(CLBL).forEach(c=>{
+    const rows=vend.filter(v=>v.grp===c);const tot=sq(rows);
+    const fat=rows.reduce((a,r)=>a+(r.pv*r.qty),0);
+    krow.innerHTML+=`<div class="kpi"><div class="kl">${CLBL[c]}</div><div class="kv">${tot.toLocaleString('pt-BR')}</div><div class="ks">R$${(fat/1000).toFixed(1)}k faturado</div></div>`;
+  });
+  el.appendChild(krow);
+  Object.keys(CLBL).forEach(c=>{
+    const bands=BND[c];const rows=vend.filter(v=>v.grp===c&&v.pv>0);const tot=sq(rows);
+    let th=`<tr><th>Faixa</th><th>Preço</th>`;
+    eids.forEach(id=>{th+=`<th class="r" style="color:${E[id].c}">${E[id].n}</th>`;});
+    th+=`<th class="r">Total</th><th class="r">Ticket Médio</th></tr>`;
+    let tb='';
+    bands.forEach(b=>{
+      const inb=rows.filter(r=>r.pv>=b.a&&r.pv<=b.b);const t=sq(inb);
+      const fat=inb.reduce((a,r)=>a+(r.pv*r.qty),0);const tk=t>0?fat/t:0;
+      tb+=`<tr><td><span class="bc ${b.k}">${b.k}</span></td><td class="mu">${b.l}</td>`;
+      eids.forEach(id=>{const v=sq(inb.filter(r=>r.empr===id));tb+=`<td class="r">${v||'—'}</td>`;});
+      tb+=`<td class="r b">${t}</td><td class="r mu">R$${tk.toFixed(0)}</td></tr>`;
+    });
+    const card=document.createElement('div');card.className='card';
+    card.innerHTML=`<div class="ch"><h3>${CLBL[c]}</h3><span class="ch-s">${tot} vendas no período</span></div><div class="sx"><table class="t"><thead>${th}</thead><tbody>${tb}</tbody></table></div>`;
+    el.appendChild(card);
+  });
+}
+
+// ─── SAFETY STOCK ─────────────────────────────
+function semM(empr,c,b){return sq(S.vend.filter(v=>v.grp===c&&v.empr===empr&&v.pv>=b.a&&v.pv<=b.b))/52;}
+function initSS(){
+  EK.forEach(e=>Object.keys(BND).forEach(c=>BND[c].forEach(b=>{const k=`${e}|${c}|${b.k}`;if(!(k in S.ss))S.ss[k]=Math.max(1,Math.round(semM(e,c,b)*2));})));
+}
+function autoSS(){
+  EK.forEach(e=>Object.keys(BND).forEach(c=>BND[c].forEach(b=>{S.ss[`${e}|${c}|${b.k}`]=Math.max(1,Math.round(semM(e,c,b)*2));})));
+  renderSeg();renderPed();
+}
+function saveSS(){
+  document.querySelectorAll('.ssi').forEach(inp=>{S.ss[inp.dataset.k]=parseInt(inp.value)||0;});
+  renderPed();
+  const btn=document.getElementById('btn-save-ss');btn.textContent='✓ Salvo';
+  setTimeout(()=>{btn.textContent='Salvar';},2000);
+}
+function renderSeg(){
+  const el=document.getElementById('ct-seg');el.innerHTML='';
+  Object.keys(BND).forEach(c=>{
+    const bands=BND[c];
+    let th=`<tr><th>Faixa</th><th>Preço</th>`;
+    EK.forEach(id=>{th+=`<th style="color:${E[id].c}">${E[id].n}</th>`;});
+    th+=`</tr>`;
+    let tb='';
+    bands.forEach(b=>{
+      tb+=`<tr><td><span class="bc ${b.k}">${b.k}</span></td><td class="mu">${b.l}</td>`;
+      EK.forEach(id=>{const k=`${id}|${c}|${b.k}`;tb+=`<td><input class="ssi" type="number" min="0" data-k="${k}" value="${S.ss[k]||0}"></td>`;});
+      tb+=`</tr>`;
+    });
+    const card=document.createElement('div');card.className='card';
+    card.innerHTML=`<div class="ch"><h3>${CLBL[c]}</h3></div><div class="sx"><table class="t"><thead>${th}</thead><tbody>${tb}</tbody></table></div>`;
+    el.appendChild(card);
+  });
+}
+
+// ─── PEDIDOS ──────────────────────────────────
+function getEst(){
+  const m={};
+  S.sem.rows.forEach(r=>{
+    const c=cat(r.sub);if(!BND[c])return;
+    const b=band(c,r.preco);if(!b)return;
+    const k=`${r.empr}|${c}|${b.k}`;m[k]=(m[k]||0)+r.saldo;
+  });
+  return m;
+}
+
+function renderPed(){
+  const el=document.getElementById('ct-ped');el.innerHTML='';
+  const est=getEst();
+  const eids=S.f==='TODAS'?EK:[S.f];
+  const grid=document.createElement('div');grid.className='ogrid';
+
+  eids.forEach(id=>{
+    const emp=E[id];
+    let totalNeed=0;
+    const catData={};
+    Object.keys(BND).forEach(c=>{
+      catData[c]=BND[c].map(b=>{
+        const k=`${id}|${c}|${b.k}`;
+        const atual=est[k]||0,seg=S.ss[k]||0,need=Math.max(0,seg-atual);
+        if(need>0)totalNeed+=need;
+        return{b,atual,seg,need};
+      });
+    });
+
+    const card=document.createElement('div');card.className='ocard';
+    card.innerHTML=`<div class="och">
+      <div class="obar" style="background:${emp.c}"></div>
+      <div class="oinfo"><h4>${emp.n}</h4><span>Ref.: ${S.sem.data}</span></div>
+      <span class="obadge ${totalNeed>0?'need':'allok'}">${totalNeed>0?totalNeed+' peças a repor':'Estoque OK'}</span>
+    </div>`;
+
+    Object.keys(BND).forEach(c=>{
+      const rows=catData[c];
+      let tb=rows.map(r=>`
+        <tr>
+          <td><span class="bc ${r.b.k}">${r.b.k}</span> <span class="mu" style="font-size:10px">${r.b.l}</span></td>
+          <td class="r">${r.atual}</td>
+          <td class="r">${r.seg}</td>
+          <td class="r"><span class="${r.need>0?'oqty':'oqty z'}">${r.need>0?r.need:'—'}</span></td>
+        </tr>`).join('');
+      card.innerHTML+=`<table class="oct">
+        <thead>
+          <tr><th colspan="4" class="cath" style="background:${emp.c}18;color:${emp.c}">${CLBL[c]}</th></tr>
+          <tr><th>Faixa</th><th class="r">Atual</th><th class="r">Mínimo</th><th class="r">Pedir</th></tr>
+        </thead>
+        <tbody>${tb}</tbody>
+      </table>`;
+    });
+
+    const vm=Object.keys(BND).reduce((a,c)=>a+BND[c].reduce((b2,bnd)=>b2+semM(id,c,bnd),0),0);
+    card.innerHTML+=`<div class="ofoot"><span>Venda méd./semana: <strong>${vm.toFixed(1)} peças</strong></span><span>${S.sem.data}</span></div>`;
+    grid.appendChild(card);
+  });
+
+  el.appendChild(grid);
+  const pb=document.createElement('div');
+  pb.className='no-print';pb.style.cssText='margin-top:16px;text-align:right;';
+  pb.innerHTML=`<button class="btn p" onclick="window.print()">🖨 Imprimir / Salvar PDF</button>`;
+  el.appendChild(pb);
+}
+</script>
+</body>
+</html>
