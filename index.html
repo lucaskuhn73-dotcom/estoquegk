@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard de Estoque — Grupo Kuhn</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap');
+  :root {
+    --bg:#0d0f14; --surface:#13161e; --surface2:#1a1f2c; --border:#252b3b;
+    --accent:#e8433a; --accent2:#f0a500; --accent3:#3a7bd5;
+    --green:#2ecc71; --red:#e74c3c; --text:#e8eaf0; --muted:#6b7494;
+    --fh:'Syne',sans-serif; --fm:'Space Mono',monospace;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{font-size:14px;}
+  body{background:var(--bg);color:var(--text);font-family:var(--fm);min-height:100vh;}
+
+  header{border-bottom:1px solid var(--border);padding:15px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;background:var(--bg);}
+  .logo{font-family:var(--fh);font-weight:800;font-size:1.1rem;letter-spacing:-.02em;}
+  .logo span{color:var(--accent);}
+  #hdr-meta{font-size:.68rem;color:var(--muted);text-align:right;line-height:1.8;}
+  #hdr-meta strong{color:var(--accent2);}
+
+  #upload-wrap{padding:32px;max-width:820px;margin:28px auto;}
+  .ptitle{font-family:var(--fh);font-size:1.4rem;font-weight:800;margin-bottom:5px;}
+  .psub{color:var(--muted);font-size:.76rem;margin-bottom:18px;}
+  .info-box{background:rgba(58,123,213,.08);border:1px solid rgba(58,123,213,.2);border-radius:6px;padding:11px 14px;font-size:.76rem;color:#7aadff;margin-bottom:18px;}
+  .upload-row{display:flex;gap:12px;flex-wrap:wrap;}
+  .upload-card{flex:1;min-width:200px;border:1px dashed var(--border);border-radius:8px;padding:18px 20px;cursor:pointer;position:relative;transition:border-color .2s,background .2s;}
+  .upload-card:hover{border-color:var(--accent2);background:rgba(240,165,0,.04);}
+  .upload-card input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+  .upload-card h3{font-family:var(--fh);font-size:.88rem;margin-bottom:5px;}
+  .upload-card p{color:var(--muted);font-size:.7rem;margin-top:5px;}
+  .badge{display:inline-block;font-size:.6rem;padding:2px 8px;border-radius:20px;background:rgba(107,116,148,.2);color:var(--muted);margin-bottom:7px;}
+  .upload-card.loaded{border-color:var(--green);}
+  .upload-card.loaded .badge{background:rgba(46,204,113,.15);color:var(--green);}
+  .err-box{background:rgba(232,67,58,.12);border:1px solid rgba(232,67,58,.3);border-radius:6px;padding:11px 14px;color:#ff7b72;font-size:.76rem;margin-top:12px;display:none;}
+
+  #app{display:none;flex-direction:column;min-height:calc(100vh - 56px);}
+  .tabs{display:flex;border-bottom:1px solid var(--border);padding:0 28px;background:var(--bg);position:sticky;top:56px;z-index:90;overflow-x:auto;}
+  .tab{padding:12px 16px;font-family:var(--fh);font-size:.76rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;color:var(--muted);transition:color .15s,border-color .15s;}
+  .tab:hover{color:var(--text);}
+  .tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+  .tab-pane{display:none;padding:22px 28px;}
+  .tab-pane.active{display:block;}
+
+  .fbar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:18px;}
+  .fbar label{font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-right:3px;}
+  .fbtn{padding:3px 11px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--fm);font-size:.65rem;cursor:pointer;transition:all .15s;}
+  .fbtn:hover{border-color:var(--accent2);color:var(--accent2);}
+  .fbtn.on{border-color:var(--accent);background:rgba(232,67,58,.12);color:var(--accent);}
+
+  .g2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .g4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+  @media(max-width:900px){.g2{grid-template-columns:1fr;}.g4{grid-template-columns:1fr 1fr;}}
+
+  .sec{margin-bottom:24px;}
+  .sec-hdr{display:flex;align-items:baseline;gap:10px;margin-bottom:10px;border-left:3px solid var(--accent);padding-left:10px;}
+  .sec-hdr h2{font-family:var(--fh);font-size:.9rem;font-weight:700;}
+  .sec-hdr span{font-size:.65rem;color:var(--muted);}
+
+  .kcard{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:13px 15px;}
+  .klbl{font-size:.62rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:6px;}
+  .kval{font-family:var(--fh);font-size:1.5rem;font-weight:800;line-height:1;}
+  .ksub{font-size:.65rem;color:var(--muted);margin-top:4px;}
+
+  .bt{width:100%;border-collapse:collapse;font-size:.78rem;}
+  .bt th{font-size:.6rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding:6px 9px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;}
+  .bt td{padding:7px 9px;border-bottom:1px solid rgba(37,43,59,.45);}
+  .bt tr:last-child td{border-bottom:none;}
+  .bt tr:hover td{background:rgba(255,255,255,.02);}
+  .bt tfoot td{border-top:1px solid var(--border);font-weight:700;padding-top:9px;}
+  .sx{overflow-x:auto;}
+
+  .bl{display:inline-block;padding:2px 8px;border-radius:3px;font-size:.62rem;font-weight:700;letter-spacing:.04em;}
+  .bA{background:rgba(46,204,113,.15);color:#2ecc71;}
+  .bB{background:rgba(58,123,213,.15);color:#3a7bd5;}
+  .bC{background:rgba(240,165,0,.15);color:#f0a500;}
+  .bD{background:rgba(232,67,58,.15);color:#e8433a;}
+  .bE{background:rgba(155,89,182,.15);color:#9b59b6;}
+
+  .pos{color:var(--green);} .neg{color:var(--red);} .zt{color:var(--muted);}
+
+  .ssi{width:60px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:var(--fm);font-size:.78rem;padding:3px 5px;border-radius:4px;text-align:center;}
+  .ssi:focus{outline:none;border-color:var(--accent2);}
+
+  .btn{padding:7px 16px;border:none;font-family:var(--fh);font-size:.75rem;font-weight:700;border-radius:4px;cursor:pointer;letter-spacing:.04em;transition:opacity .15s;}
+  .btn:hover{opacity:.85;}
+  .bp{background:var(--accent);color:#fff;}
+  .bb{background:var(--accent3);color:#fff;}
+  .bg{background:var(--green);color:#000;}
+
+  .nc{display:inline-block;padding:2px 8px;border-radius:3px;font-weight:700;font-size:.72rem;}
+  .ny{background:rgba(232,67,58,.15);color:#e8433a;}
+  .no{background:rgba(46,204,113,.1);color:#2ecc71;}
+
+  .acg{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:9px;}
+  .acc{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:11px 13px;}
+  .act{font-size:.6rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px;}
+  .acn{font-family:var(--fh);font-size:1.3rem;font-weight:800;}
+  .acl{font-size:.65rem;color:var(--muted);margin-top:3px;}
+
+  .bc{display:flex;flex-direction:column;gap:5px;}
+  .br{display:flex;align-items:center;gap:7px;}
+  .brl{font-size:.65rem;color:var(--muted);width:130px;flex-shrink:0;text-align:right;}
+  .brt{flex:1;background:var(--border);border-radius:2px;height:16px;position:relative;overflow:hidden;}
+  .brf{height:100%;border-radius:2px;transition:width .5s cubic-bezier(.4,0,.2,1);}
+  .brv{font-size:.65rem;font-weight:700;position:absolute;right:5px;top:50%;transform:translateY(-50%);}
+
+  .wksel{display:flex;gap:9px;align-items:center;margin-bottom:16px;flex-wrap:wrap;}
+  .wksel label{font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;}
+  .wksel select{background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:var(--fm);font-size:.76rem;padding:4px 9px;border-radius:4px;}
+  .wksel select:focus{outline:none;border-color:var(--accent2);}
+  .wksel a{font-size:.72rem;color:var(--accent3);cursor:pointer;margin-left:10px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">KUHN <span>///</span> ESTOQUE</div>
+  <div id="hdr-meta">Nenhum arquivo carregado</div>
+</header>
+
+<div id="upload-wrap">
+  <div class="ptitle">Dashboard de Análise de Estoque</div>
+  <div class="psub">Carregue os arquivos exportados do Microvix para iniciar.</div>
+  <div class="info-box">
+    📌 <strong>Inventário:</strong> ExportacaoRegistroInventario.csv — carregue toda semana.<br>
+    📌 <strong>Vendas:</strong> ProdutosServicosVendidos.csv — histórico para curva e estoque de segurança.
+  </div>
+  <div class="upload-row">
+    <div class="upload-card" id="card-inv">
+      <div class="badge" id="bdg-inv">AGUARDANDO</div>
+      <h3>Registro de Inventário</h3>
+      <p>ExportacaoRegistroInventario.csv<br>Exportar toda semana do ERP</p>
+      <input type="file" accept=".csv" id="fi-inv">
+    </div>
+    <div class="upload-card" id="card-ven">
+      <div class="badge" id="bdg-ven">AGUARDANDO</div>
+      <h3>Produtos/Serviços Vendidos</h3>
+      <p>ProdutosServicosVendidos.csv<br>Histórico de vendas do período</p>
+      <input type="file" accept=".csv" id="fi-ven">
+    </div>
+  </div>
+  <div style="margin-top:16px;text-align:right;">
+    <button class="btn bp" id="btn-go" onclick="analisar()" disabled>ANALISAR →</button>
+  </div>
+  <div class="err-box" id="err-box"></div>
+</div>
+
+<div id="app">
+  <div class="tabs">
+    <div class="tab active" data-p="p-est" onclick="showTab(this)">📦 Estoque Atual</div>
+    <div class="tab" data-p="p-mov" onclick="showTab(this)">↕ Movimentação</div>
+    <div class="tab" data-p="p-ven" onclick="showTab(this)">📊 Curva de Vendas</div>
+    <div class="tab" data-p="p-ss" onclick="showTab(this)">🔒 Est. de Segurança</div>
+    <div class="tab" data-p="p-ped" onclick="showTab(this)">🛒 Pedidos Sugeridos</div>
+  </div>
+
+  <div class="tab-pane active" id="p-est">
+    <div class="ptitle">Estoque Atual</div><div class="psub" id="sub-est"></div>
+    <div class="fbar"><label>Empresa:</label><div id="fil-est"></div></div>
+    <div id="cnt-est"></div>
+  </div>
+  <div class="tab-pane" id="p-mov">
+    <div class="ptitle">Movimentação Semanal</div>
+    <div class="psub">Recebimentos e vendas por faixa de preço entre duas semanas</div>
+    <div class="wksel">
+      <label>Anterior:</label>
+      <select id="sel-ant" onchange="renderMov()"><option value="">— sem dados —</option></select>
+      <label>Atual:</label>
+      <select id="sel-at" onchange="renderMov()"><option value="">— sem dados —</option></select>
+      <a onclick="document.getElementById('fi-inv2').click()">+ Carregar semana anterior</a>
+      <input type="file" id="fi-inv2" accept=".csv" style="display:none">
+    </div>
+    <div class="fbar"><label>Empresa:</label><div id="fil-mov"></div></div>
+    <div id="cnt-mov"></div>
+  </div>
+  <div class="tab-pane" id="p-ven">
+    <div class="ptitle">Curva de Vendas</div>
+    <div class="psub">Histórico por categoria, faixa de preço e loja</div>
+    <div class="fbar"><label>Empresa:</label><div id="fil-ven"></div></div>
+    <div id="cnt-ven"></div>
+  </div>
+  <div class="tab-pane" id="p-ss">
+    <div class="ptitle">Estoque de Segurança</div>
+    <div class="psub">Mínimo de peças por categoria × faixa × loja</div>
+    <div class="info-box">Ajuste automático calcula 2× a média semanal de vendas do histórico carregado.</div>
+    <div style="display:flex;gap:9px;margin-bottom:18px;flex-wrap:wrap;">
+      <button class="btn bb" style="font-size:.72rem;padding:6px 14px" onclick="autoSS()">⚡ Ajuste Automático</button>
+      <button class="btn bp" style="font-size:.72rem;padding:6px 14px" id="btn-save-ss" onclick="saveSS()">✓ Salvar</button>
+    </div>
+    <div id="cnt-ss"></div>
+  </div>
+  <div class="tab-pane" id="p-ped">
+    <div class="ptitle">Pedidos Sugeridos</div>
+    <div class="psub">Quantidade a repor = Segurança − Atual (quando positivo)</div>
+    <div class="fbar"><label>Empresa:</label><div id="fil-ped"></div></div>
+    <div id="cnt-ped"></div>
+  </div>
+</div>
+
+<script>
+// ─── FAIXAS (calibradas com preços reais de venda) ───────────────────────────
+const BO=[{k:'A',l:'Até R$199',n:0,x:199},{k:'B',l:'R$200–R$299',n:200,x:299},{k:'C',l:'R$300–R$499',n:300,x:499},{k:'D',l:'R$500–R$699',n:500,x:699},{k:'E',l:'Acima R$699',n:700,x:99999}];
+const BR=[{k:'A',l:'Até R$299',n:0,x:299},{k:'B',l:'R$300–R$449',n:300,x:449},{k:'C',l:'R$450–R$599',n:450,x:599},{k:'D',l:'Acima R$599',n:600,x:99999}];
+const BG=[{k:'A',l:'Até R$299',n:0,x:299},{k:'B',l:'R$300–R$449',n:300,x:449},{k:'C',l:'R$450–R$599',n:450,x:599},{k:'D',l:'Acima R$599',n:600,x:99999}];
+const BANDS={OCULOS:BO,RELOGIOS:BR,GRAU:BG,'MULTI LENTE':BG};
+const SUB2CAT={'1-OCULOS':'OCULOS','3-RELOGIOS':'RELOGIOS','22-GRAU':'GRAU','25-MULTI LENTE':'MULTI LENTE'};
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+const S={semanas:{},cur:null,vend:[],ss:{},emp:{},fil:'TODAS'};
+
+// ─── PARSING ─────────────────────────────────────────────────────────────────
+function n(s){
+  s=String(s||'').trim();if(!s)return 0;
+  if(s.includes(','))s=s.replace(/\./g,'').replace(',','.');
+  return parseFloat(s)||0;
+}
+
+function readF(file,cb){
+  const r=new FileReader();
+  r.onload=ev=>{
+    try{
+      let text=new TextDecoder('utf-8').decode(ev.target.result);
+      if(text.includes('\xC3')||text.charCodeAt(0)===65279) text=text.replace(/^\uFEFF/,'');
+      // detect garbled utf8 decoded as latin — if lots of Ã present try windows-1252
+      const garbled=(text.match(/Ã/g)||[]).length>5;
+      if(garbled) text=new TextDecoder('windows-1252').decode(ev.target.result);
+      cb(null,text.replace(/^\uFEFF/,''));
+    }catch(e){cb(e);}
+  };
+  r.onerror=()=>cb(new Error('Falha ao ler'));
+  r.readAsArrayBuffer(file);
+}
+
+function parseInv(text){
+  const lines=text.split(/\r?\n/);
+  const rows=[];let sub='',data='';const emp={};
+  // Header section 0-26
+  for(let i=0;i<27;i++){
+    const p=lines[i].split(';');
+    if(p[4]&&p[4].includes('baseados na data')) data=p[4].replace(/.*data\s*/i,'').trim();
+    if(p[3]&&/-/.test(p[3])){const m=p[3].match(/^(\d+)\s*-\s*(.+)/);if(m)emp[m[1].trim()]=m[2].trim();}
+  }
+  // Data rows from line 27 onward
+  // Cols: [0]Cod [1]Desc [2]Ref [3]Empr [4]Und [5]Saldo [6]Preco [7]Subtotal
+  for(let i=27;i<lines.length;i++){
+    const p=lines[i].split(';');
+    if(!p[0].trim()&&p[1]&&p[1].trim()&&p[1].trim()!=='Total') sub=p[1].trim();
+    if(p[0].trim()&&/^\d+$/.test(p[0].trim())){
+      rows.push({cod:p[0].trim(),desc:(p[1]||'').trim(),ref:(p[2]||'').trim(),empr:(p[3]||'').trim(),saldo:n(p[5]),preco:n(p[6]),sub});
+    }
+  }
+  return{rows,data,emp};
+}
+
+function parseVend(text){
+  const lines=text.split(/\r?\n/);
+  const rows=[];let grp=null;
+  const gmap={'OCULOS':'OCULOS','RELOGIOS':'RELOGIOS','GRAU':'GRAU','MULTI LENTE':'MULTI LENTE'};
+  for(let i=0;i<lines.length;i++){
+    const p=lines[i].split(';');
+    if(p[0].startsWith('Grupo -')) grp=p[0].replace('Grupo -','').trim();
+    if(grp&&gmap[grp]&&p[0].trim()&&/^\d+$/.test(p[0].trim())){
+      const emprRaw=(p[4]||'').trim();
+      const eid=emprRaw.split(/[\s-]/)[0].trim();
+      const qty=n(p[5]);if(qty<=0)continue;
+      rows.push({grp:gmap[grp],ref:(p[2]||'').trim(),empr:eid,qty,prv:n(p[9])});
+    }
+  }
+  return rows;
+}
+
+// ─── UPLOAD ───────────────────────────────────────────────────────────────────
+let _iL=false,_vL=false,_ri=null,_rv=null;
+document.getElementById('fi-inv').onchange=function(e){
+  const f=e.target.files[0];if(!f)return;
+  readF(f,(err,t)=>{if(err)return showErr('Erro inventário: '+err.message);_ri=t;_iL=true;document.getElementById('card-inv').classList.add('loaded');document.getElementById('bdg-inv').textContent='✓ '+f.name;chk();});
+};
+document.getElementById('fi-ven').onchange=function(e){
+  const f=e.target.files[0];if(!f)return;
+  readF(f,(err,t)=>{if(err)return showErr('Erro vendas: '+err.message);_rv=t;_vL=true;document.getElementById('card-ven').classList.add('loaded');document.getElementById('bdg-ven').textContent='✓ '+f.name;chk();});
+};
+document.getElementById('fi-inv2').onchange=function(e){
+  const f=e.target.files[0];if(!f)return;
+  readF(f,(err,t)=>{if(err)return;const inv=parseInv(t);const k=inv.data||'sem_'+Date.now();S.semanas[k]=inv.rows;Object.assign(S.emp,inv.emp);refreshSels();});
+};
+function chk(){const ok=_iL&&_vL;const btn=document.getElementById('btn-go');btn.disabled=!ok;if(ok){btn.style.background='var(--green)';btn.textContent='ANALISAR →';}}
+function showErr(m){const e=document.getElementById('err-box');e.textContent='⚠ '+m;e.style.display='block';}
+
+function analisar(){
+  document.getElementById('err-box').style.display='none';
+  try{
+    const inv=parseInv(_ri);
+    if(!inv.rows.length)return showErr('Nenhum produto encontrado. Verifique o arquivo (ExportacaoRegistroInventario.csv).');
+    const k=inv.data||'semana_atual';
+    S.semanas[k]=inv.rows;
+    S.cur={rows:inv.rows,data:inv.data,key:k};
+    Object.assign(S.emp,inv.emp);
+    inv.rows.forEach(r=>{if(!S.emp[r.empr])S.emp[r.empr]='Loja '+r.empr;});
+    S.vend=parseVend(_rv);
+    refreshSels();
+    initSS();
+    document.getElementById('upload-wrap').style.display='none';
+    document.getElementById('app').style.display='flex';
+    document.getElementById('hdr-meta').innerHTML=`Data: <strong>${inv.data||'—'}</strong> &nbsp;|&nbsp; ${inv.rows.length} itens &nbsp;|&nbsp; ${Object.keys(S.emp).length} lojas &nbsp;|&nbsp; ${S.vend.length} vendas no hist.`;
+    buildFil();renderEst();renderMov();renderVen();renderSS();renderPed();
+  }catch(e){showErr('Erro: '+e.message);console.error(e);}
+}
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+function eLabel(id){return(S.emp[id]||('Loja '+id)).replace(/^PA (ALTAMIRA|PARAUAPEBAS|SANTAREM) - /,'').replace('ALTAMIRA ','ALT ').replace('PARAUAPEBAS ','PAR ').replace('SANTAREM ','STM ');}
+function emprs(){return Object.keys(S.emp).sort((a,b)=>parseInt(a)-parseInt(b));}
+function fRows(rows){return S.fil==='TODAS'?rows:rows.filter(r=>r.empr===S.fil);}
+function fVend(v){return S.fil==='TODAS'?v:v.filter(r=>r.empr===S.fil);}
+function sumS(rows){return rows.reduce((a,r)=>a+r.saldo,0);}
+function getBand(cat,p){return(BANDS[cat]||[]).find(b=>p>=b.n&&p<=b.x)||null;}
+function vsem(empr,cat,bk){
+  const b=(BANDS[cat]||[]).find(x=>x.k===bk);if(!b)return 0;
+  const rows=S.vend.filter(v=>v.grp===cat&&v.empr===empr&&v.prv>=b.n&&v.prv<=b.x);
+  return rows.reduce((a,r)=>a+r.qty,0)/52;
+}
+
+// ─── FILTERS ─────────────────────────────────────────────────────────────────
+function buildFil(){
+  ['est','mov','ven','ped'].forEach(id=>{
+    const el=document.getElementById('fil-'+id);el.innerHTML='';
+    [['TODAS','TODAS'],...emprs().map(e=>[e,eLabel(e)])].forEach(([val,lbl])=>{
+      const b=document.createElement('button');
+      b.className='fbtn'+(S.fil===val?' on':'');b.textContent=lbl;
+      b.onclick=()=>{S.fil=val;buildFil();renderEst();renderMov();renderVen();renderPed();};
+      el.appendChild(b);
+    });
+  });
+}
+
+// ─── TAB 1 — ESTOQUE ─────────────────────────────────────────────────────────
+function renderEst(){
+  const rows=fRows(S.cur.rows);
+  document.getElementById('sub-est').textContent='Data de referência: '+(S.cur.data||'—');
+  const oc=rows.filter(r=>r.sub==='1-OCULOS');
+  const re=rows.filter(r=>r.sub==='3-RELOGIOS');
+  const gr=rows.filter(r=>r.sub==='22-GRAU');
+  const ml=rows.filter(r=>r.sub==='25-MULTI LENTE');
+  const ga=[...gr,...ml];
+  const ac=rows.filter(r=>r.sub==='2-ACESSORIOS');
+  const totalV=rows.reduce((a,r)=>a+r.preco*r.saldo,0);
+  const el=document.getElementById('cnt-est');el.innerHTML='';
+  // KPIs
+  const kpi=document.createElement('div');kpi.className='g4';kpi.style.marginBottom='20px';
+  kpi.innerHTML=`
+    <div class="kcard"><div class="klbl">Óculos</div><div class="kval" style="color:var(--accent)">${sumS(oc).toLocaleString('pt-BR')}</div><div class="ksub">peças</div></div>
+    <div class="kcard"><div class="klbl">Relógios</div><div class="kval" style="color:var(--accent2)">${sumS(re).toLocaleString('pt-BR')}</div><div class="ksub">peças</div></div>
+    <div class="kcard"><div class="klbl">Grau + Multi</div><div class="kval" style="color:var(--accent3)">${sumS(ga).toLocaleString('pt-BR')}</div><div class="ksub">${sumS(gr)} grau · ${sumS(ml)} multi</div></div>
+    <div class="kcard"><div class="klbl">Valor em Estoque (PV)</div><div class="kval" style="color:var(--green)">R$${(totalV/1000).toFixed(0)}k</div><div class="ksub">preço de venda</div></div>`;
+  el.appendChild(kpi);
+  el.appendChild(bandTbl('Óculos por Faixa de Preço',oc,BO,'var(--accent)'));
+  el.appendChild(bandTbl('Relógios por Faixa de Preço',re,BR,'var(--accent2)'));
+  el.appendChild(bandTbl('Grau + Multi Lente por Faixa',ga,BG,'var(--accent3)'));
+  el.appendChild(acessTbl(ac));
+}
+
+function bandTbl(title,rows,bands,color){
+  const es=S.fil==='TODAS'?emprs():[S.fil];
+  const tot=sumS(rows);
+  const sec=document.createElement('div');sec.className='sec';
+  let h=`<div class="sec-hdr" style="border-color:${color}"><h2>${title}</h2><span>${tot.toLocaleString('pt-BR')} peças</span></div>`;
+  h+=`<div class="sx"><table class="bt"><thead><tr><th>Faixa</th><th>Preço de Venda</th>`;
+  es.forEach(id=>h+=`<th style="font-size:.58rem">${eLabel(id)}</th>`);
+  h+=`<th>Total</th><th>%</th></tr></thead><tbody>`;
+  bands.forEach(b=>{
+    const ib=rows.filter(r=>r.preco>=b.n&&r.preco<=b.x);
+    const t=sumS(ib);const pct=tot?(t/tot*100).toFixed(1):'0.0';
+    h+=`<tr><td><span class="bl b${b.k}">${b.k}</span></td><td style="color:var(--muted);font-size:.72rem">${b.l}</td>`;
+    es.forEach(id=>{const v=sumS(ib.filter(r=>r.empr===id));h+=`<td>${v>0?v:'<span class="zt">—</span>'}</td>`;});
+    h+=`<td><strong>${t}</strong></td><td style="color:${color}">${pct}%</td></tr>`;
+  });
+  // Footer totals
+  h+=`<tfoot><tr><td colspan="2">TOTAL</td>`;
+  es.forEach(id=>h+=`<td><strong>${sumS(rows.filter(r=>r.empr===id))}</strong></td>`);
+  h+=`<td><strong>${tot}</strong></td><td></td></tr></tfoot></tbody></table></div>`;
+  sec.innerHTML=h;return sec;
+}
+
+function acessTbl(rows){
+  const sec=document.createElement('div');sec.className='sec';
+  sec.innerHTML=`<div class="sec-hdr"><h2>Acessórios por Tipo</h2><span>${sumS(rows)} itens</span></div>`;
+  const map={'AC.LI':'Limpeza / Cuidados','AC.CA':'Uniformes / Camisetas','AC.ES':'Estojos','AC.CO':'Cordões','AC.PA':'Panos'};
+  const tipos={};
+  rows.forEach(r=>{const pts=r.ref.split('.');const k=pts.length>=2?pts[0]+'.'+pts[1]:r.ref;const lbl=map[k]||k;tipos[lbl]=(tipos[lbl]||0)+r.saldo;});
+  const g=document.createElement('div');g.className='acg';
+  Object.entries(tipos).sort((a,b)=>b[1]-a[1]).forEach(([l,c])=>g.innerHTML+=`<div class="acc"><div class="act">Tipo</div><div class="acn">${c}</div><div class="acl">${l}</div></div>`);
+  sec.appendChild(g);return sec;
+}
+
+// ─── TAB 2 — MOVIMENTAÇÃO ─────────────────────────────────────────────────────
+function refreshSels(){
+  const keys=Object.keys(S.semanas);
+  ['sel-ant','sel-at'].forEach(id=>{
+    const sel=document.getElementById(id);const cur=sel.value;
+    sel.innerHTML='<option value="">— selecionar —</option>';
+    keys.forEach(k=>sel.innerHTML+=`<option value="${k}"${k===cur?' selected':''}>${k}</option>`);
+  });
+  if(keys.length>=1)document.getElementById('sel-at').value=keys[keys.length-1];
+}
+
+function renderMov(){
+  const ka=document.getElementById('sel-ant').value;
+  const kb=document.getElementById('sel-at').value;
+  const el=document.getElementById('cnt-mov');el.innerHTML='';
+  if(!ka||!kb){el.innerHTML='<div class="info-box">Carregue uma semana anterior e selecione as duas semanas para comparar.</div>';return;}
+  const ra=fRows(S.semanas[ka]);const rb=fRows(S.semanas[kb]);
+  const pref={};S.cur.rows.forEach(r=>pref[r.ref]=r.preco);
+  const res={};
+  Object.keys(SUB2CAT).forEach(sub=>{const cat=SUB2CAT[sub];res[sub]={};(BANDS[cat]||[]).forEach(b=>{res[sub][b.k]={l:b.l,a:0,b:0};});});
+  function acc(rows,field){rows.forEach(r=>{if(!SUB2CAT[r.sub])return;const p=pref[r.ref]||r.preco||0;const bd=getBand(SUB2CAT[r.sub],p);if(!bd)return;res[r.sub][bd.k][field]+=r.saldo;});}
+  acc(ra,'a');acc(rb,'b');
+  const grid=document.createElement('div');grid.className='g2';
+  Object.entries(res).forEach(([sub,bands])=>{
+    const cat=SUB2CAT[sub];const ta=Object.values(bands).reduce((s,b)=>s+b.a,0);const tb=Object.values(bands).reduce((s,b)=>s+b.b,0);const dt=tb-ta;
+    let h=`<div class="sec"><div class="sec-hdr"><h2>${cat}</h2><span>${ka} → ${kb}</span></div><div class="sx"><table class="bt"><thead><tr><th>Faixa</th><th>Anterior</th><th>Atual</th><th>Recebido</th><th>Vendido</th><th>Δ</th></tr></thead><tbody>`;
+    Object.entries(bands).forEach(([bk,b])=>{
+      const d=b.b-b.a;const rec=d>0?d:0;const ven=d<0?Math.abs(d):0;
+      h+=`<tr><td><span class="bl b${bk}">${bk}</span> <span style="color:var(--muted);font-size:.68rem">${b.l}</span></td><td>${b.a}</td><td>${b.b}</td><td class="${rec>0?'pos':'zt'}">${rec>0?'+'+rec:'—'}</td><td class="${ven>0?'neg':'zt'}">${ven>0?'-'+ven:'—'}</td><td class="${d>0?'pos':d<0?'neg':'zt'}" style="font-weight:700">${d>0?'+'+d:d||'—'}</td></tr>`;
+    });
+    h+=`</tbody><tfoot><tr><td>TOTAL</td><td>${ta}</td><td>${tb}</td><td></td><td></td><td class="${dt>0?'pos':dt<0?'neg':'zt'}" style="font-weight:700">${dt>0?'+'+dt:dt||'—'}</td></tr></tfoot></table></div></div>`;
+    grid.innerHTML+=h;
+  });
+  el.appendChild(grid);
+}
+
+// ─── TAB 3 — CURVA DE VENDAS ─────────────────────────────────────────────────
+function renderVen(){
+  const el=document.getElementById('cnt-ven');el.innerHTML='';
+  const vd=fVend(S.vend);
+  const es=S.fil==='TODAS'?emprs():[S.fil];
+  const cats=['OCULOS','RELOGIOS','GRAU','MULTI LENTE'];
+  const cols=['var(--accent)','var(--accent2)','var(--accent3)','var(--green)'];
+  const kpi=document.createElement('div');kpi.className='g4';kpi.style.marginBottom='20px';
+  cats.forEach((cat,i)=>{
+    const r=vd.filter(v=>v.grp===cat);const qt=r.reduce((a,v)=>a+v.qty,0);const ft=r.reduce((a,v)=>a+v.prv*v.qty,0);
+    kpi.innerHTML+=`<div class="kcard"><div class="klbl">${cat}</div><div class="kval" style="color:${cols[i]}">${qt.toLocaleString('pt-BR')}</div><div class="ksub">R$${(ft/1000).toFixed(1)}k faturado</div></div>`;
+  });
+  el.appendChild(kpi);
+  cats.forEach((cat,ci)=>{
+    const gr=vd.filter(v=>v.grp===cat);if(!gr.length)return;
+    const bands=BANDS[cat];const tot=gr.reduce((a,v)=>a+v.qty,0);
+    const sec=document.createElement('div');sec.className='sec';
+    let h=`<div class="sec-hdr" style="border-color:${cols[ci]}"><h2>${cat}</h2><span>${tot.toLocaleString('pt-BR')} unidades</span></div>`;
+    h+=`<div class="sx"><table class="bt"><thead><tr><th>Faixa</th><th>Preço Venda</th>`;
+    es.forEach(id=>h+=`<th style="font-size:.58rem">${eLabel(id)}</th>`);
+    h+=`<th>Total</th><th>Ticket Médio</th><th>%</th></tr></thead><tbody>`;
+    bands.forEach(b=>{
+      const ib=gr.filter(v=>v.prv>=b.n&&v.prv<=b.x);const qt=ib.reduce((a,v)=>a+v.qty,0);const ft=ib.reduce((a,v)=>a+v.prv*v.qty,0);
+      const tk=qt>0?ft/qt:0;const pct=tot?(qt/tot*100).toFixed(1):'0.0';
+      h+=`<tr><td><span class="bl b${b.k}">${b.k}</span></td><td style="color:var(--muted);font-size:.72rem">${b.l}</td>`;
+      es.forEach(id=>{const v=ib.filter(r=>r.empr===id).reduce((a,r)=>a+r.qty,0);h+=`<td>${v>0?v:'<span class="zt">—</span>'}</td>`;});
+      h+=`<td><strong>${qt}</strong></td><td style="color:var(--accent2)">R$${tk.toFixed(0)}</td><td style="color:${cols[ci]}">${pct}%</td></tr>`;
+    });
+    h+=`</tbody></table></div>`;sec.innerHTML+=h;el.appendChild(sec);
+  });
+  // Bar chart
+  const sec2=document.createElement('div');sec2.className='sec';
+  sec2.innerHTML='<div class="sec-hdr"><h2>Vendas por Loja</h2></div>';
+  const tots=es.map(id=>({id,t:vd.filter(v=>v.empr===id).reduce((a,v)=>a+v.qty,0)})).sort((a,b)=>b.t-a.t);
+  const mx=Math.max(...tots.map(e=>e.t),1);
+  const ch=document.createElement('div');ch.className='bc';
+  tots.forEach(e=>ch.innerHTML+=`<div class="br"><div class="brl">${eLabel(e.id)}</div><div class="brt"><div class="brf" style="width:${e.t/mx*100}%;background:var(--accent)"></div><span class="brv">${e.t}</span></div></div>`);
+  sec2.appendChild(ch);el.appendChild(sec2);
+}
+
+// ─── TAB 4 — SAFETY STOCK ────────────────────────────────────────────────────
+function initSS(){if(Object.keys(S.ss).length>0)return;autoSS(true);}
+function autoSS(silent){
+  emprs().forEach(em=>{['OCULOS','RELOGIOS','GRAU','MULTI LENTE'].forEach(cat=>{(BANDS[cat]||[]).forEach(b=>{const k=`${em}|${cat}|${b.k}`;S.ss[k]=Math.max(1,Math.round(vsem(em,cat,b.k)*2));});});});
+  if(!silent){renderSS();renderPed();}
+}
+function renderSS(){
+  const el=document.getElementById('cnt-ss');el.innerHTML='';
+  const es=emprs();
+  [['OCULOS',BO,'Óculos'],['RELOGIOS',BR,'Relógios'],['GRAU',BG,'Grau'],['MULTI LENTE',BG,'Multi Lente']].forEach(([cat,bands,lbl])=>{
+    const sec=document.createElement('div');sec.className='sec';
+    let h=`<div class="sec-hdr"><h2>${lbl}</h2><span>mínimo por loja</span></div>`;
+    h+=`<div class="sx"><table class="bt"><thead><tr><th>Faixa</th><th>Preço</th>`;
+    es.forEach(id=>h+=`<th style="font-size:.58rem">${eLabel(id)}</th>`);
+    h+=`</tr></thead><tbody>`;
+    bands.forEach(b=>{
+      h+=`<tr><td><span class="bl b${b.k}">${b.k}</span></td><td style="color:var(--muted);font-size:.7rem">${b.l}</td>`;
+      es.forEach(em=>{const k=`${em}|${cat}|${b.k}`;const v=S.ss[k]!==undefined?S.ss[k]:0;h+=`<td><input class="ssi" type="number" min="0" data-k="${k}" value="${v}" oninput="S.ss[this.dataset.k]=parseInt(this.value)||0"></td>`;});
+      h+=`</tr>`;
+    });
+    h+=`</tbody></table></div>`;sec.innerHTML+=h;el.appendChild(sec);
+  });
+}
+function saveSS(){
+  document.querySelectorAll('.ssi').forEach(inp=>S.ss[inp.dataset.k]=parseInt(inp.value)||0);
+  renderPed();
+  const btn=document.getElementById('btn-save-ss');btn.textContent='✓ Salvo!';btn.classList.replace('bp','bg');
+  setTimeout(()=>{btn.textContent='✓ Salvar';btn.classList.replace('bg','bp');},2000);
+}
+
+// ─── TAB 5 — PEDIDOS ─────────────────────────────────────────────────────────
+function renderPed(){
+  const el=document.getElementById('cnt-ped');el.innerHTML='';
+  const es=S.fil==='TODAS'?emprs():[S.fil];
+  // Build estoque map
+  const est={};
+  S.cur.rows.forEach(r=>{const cat=SUB2CAT[r.sub];if(!cat)return;const bd=getBand(cat,r.preco);if(!bd)return;const k=`${r.empr}|${cat}|${bd.k}`;est[k]=(est[k]||0)+r.saldo;});
+  let totalNeed=0;
+  const cats=[['OCULOS',BO,'Óculos'],['RELOGIOS',BR,'Relógios'],['GRAU',BG,'Grau'],['MULTI LENTE',BG,'Multi Lente']];
+  cats.forEach(([cat,bands,lbl])=>{
+    const sec=document.createElement('div');sec.className='sec';
+    let h=`<div class="sec-hdr"><h2>${lbl}</h2></div>`;
+    h+=`<div class="sx"><table class="bt"><thead><tr><th>Loja</th><th>Faixa</th><th>Preço</th><th>Atual</th><th>Segurança</th><th>Venda/Sem.</th><th>Pedido</th><th>Status</th></tr></thead><tbody>`;
+    let catNeed=false;
+    es.forEach(em=>{bands.forEach(b=>{
+      const k=`${em}|${cat}|${b.k}`;const at=est[k]||0;const ss=S.ss[k]||0;const vk=vsem(em,cat,b.k).toFixed(1);const nd=Math.max(0,ss-at);
+      if(nd>0){catNeed=true;totalNeed+=nd;}
+      h+=`<tr><td style="font-size:.7rem;color:var(--muted)">${eLabel(em)}</td><td><span class="bl b${b.k}">${b.k}</span></td><td style="font-size:.7rem;color:var(--muted)">${b.l}</td><td>${at}</td><td>${ss}</td><td class="zt">${vk}</td><td style="font-weight:700">${nd>0?nd:'—'}</td><td><span class="nc ${nd>0?'ny':'no'}">${nd>0?'⚠ REPOR':'OK'}</span></td></tr>`;
+    });});
+    if(!catNeed)h+=`<tr><td colspan="8" style="text-align:center;color:var(--green);padding:14px">✓ Estoque acima do mínimo de segurança</td></tr>`;
+    h+=`</tbody></table></div>`;sec.innerHTML+=h;el.appendChild(sec);
+  });
+  // Summary KPI
+  const kpi=document.createElement('div');kpi.className='g4';kpi.style.marginBottom='20px';
+  kpi.innerHTML=`<div class="kcard"><div class="klbl">Total a Repor</div><div class="kval" style="color:${totalNeed>0?'var(--accent)':'var(--green)'}">${totalNeed}</div><div class="ksub">peças abaixo do mínimo</div></div>`;
+  el.insertBefore(kpi,el.firstChild);
+}
+
+// ─── TABS ─────────────────────────────────────────────────────────────────────
+function showTab(el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');document.getElementById(el.dataset.p).classList.add('active');
+}
+</script>
+</body>
+</html>
