@@ -669,7 +669,17 @@ function renderMov(){
 // ══════════════════════════════════════════
 function renderVen(){
   const el=document.getElementById('ct-ven'); el.innerHTML='';
-  if(!S.vend.length){ el.innerHTML='<div style="padding:18px;color:var(--muted);font-size:12px">Sem dados de vendas — suba o arquivo Produtos Vendidos.</div>'; return; }
+  if(!S.vend.length){
+    el.innerHTML=`<div style="padding:20px;border:1.5px dashed var(--border);border-radius:6px;text-align:center;">
+      <div style="font-size:13px;font-weight:600;margin-bottom:6px;">Sem dados de vendas</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">Suba o arquivo <strong>ProdutosServicosVendidos.csv</strong> para habilitar esta aba.</div>
+      <label style="padding:7px 16px;background:var(--text);color:#fff;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;display:inline-block;">
+        Carregar agora
+        <input type="file" accept=".csv" style="display:none" onchange="carregarVendidosAvulso(this)">
+      </label>
+    </div>`;
+    return;
+  }
   const vend=fv(S.vend), eids=S.f==='TODAS'?EK:[S.f];
   const krow=document.createElement('div'); krow.className='krow';
   Object.keys(CLBL).forEach(c=>{
@@ -698,14 +708,35 @@ function renderVen(){
 }
 
 // ══════════════════════════════════════════
+//  CARREGAR VENDIDOS AVULSO
+// ══════════════════════════════════════════
+function carregarVendidosAvulso(input){
+  const f = input.files[0]; if(!f) return;
+  rd(f, t=>{
+    S.vend = parseVend(t);
+    initSS();
+    renderAll();
+    // Salvar no Sheets
+    fetch(SHEETS_URL,{method:'POST',body:JSON.stringify({action:'saveVendidos',rows:S.vend})})
+      .then(r=>r.json())
+      .then(d=>{ if(d.ok) setStatus('Vendidos salvos no Sheets','ok'); })
+      .catch(()=>setStatus('Erro ao salvar vendidos','err'));
+  });
+}
+
+// ══════════════════════════════════════════
 //  SAFETY STOCK
 // ══════════════════════════════════════════
 function semM(empr,c,b){ return sq(S.vend.filter(v=>v.grp===c&&v.empr===empr&&v.pv>=b.a&&v.pv<=b.b))/52; }
 
 function initSS(){
+  // Se tem vendidos, calcular automatico para keys que nao existem ainda
   EK.forEach(e=>Object.keys(BND).forEach(c=>BND[c].forEach(b=>{
     const k=`${e}|${c}|${b.k}`;
-    if(!(k in S.ss)) S.ss[k]=Math.max(1,Math.round(semM(e,c,b)*4));
+    if(!(k in S.ss)){
+      const vm = semM(e,c,b);
+      S.ss[k] = S.vend.length ? Math.max(1,Math.round(vm*4)) : 0;
+    }
   })));
 }
 
@@ -730,15 +761,30 @@ function renderSeg(){
     const bands=BND[c];
     let th=`<tr><th>Faixa</th><th>Preço</th>`;
     EK.forEach(id=>{th+=`<th style="color:${E[id].c}">${E[id].n}</th>`;});
-    th+=`</tr>`;
-    let tb='';
+    th+=`<th class="r" style="font-weight:700;">Total</th></tr>`;
+    let tb=''; let totalGeral=0;
+    const totaisFaixa=[];
     bands.forEach(b=>{
+      let totFaixa=0;
       tb+=`<tr><td><span class="bc ${b.k}">${b.k}</span></td><td class="mu">${b.l}</td>`;
-      EK.forEach(id=>{ const k=`${id}|${c}|${b.k}`; tb+=`<td><input class="ssi" type="number" min="0" data-k="${k}" value="${S.ss[k]||0}"></td>`; });
-      tb+=`</tr>`;
+      EK.forEach(id=>{
+        const k=`${id}|${c}|${b.k}`;
+        const val=S.ss[k]||0;
+        totFaixa+=val;
+        tb+=`<td><input class="ssi" type="number" min="0" data-k="${k}" value="${val}"></td>`;
+      });
+      totFaixa; totalGeral+=totFaixa; totaisFaixa.push(totFaixa);
+      tb+=`<td class="r b">${totFaixa}</td></tr>`;
     });
+    // Linha de total
+    let tfRow=`<tr style="border-top:2px solid var(--border);background:var(--light)"><td class="b" colspan="2">Total</td>`;
+    EK.forEach(id=>{
+      const tot=bands.reduce((a,b)=>a+(S.ss[`${id}|${c}|${b.k}`]||0),0);
+      tfRow+=`<td class="r b" style="color:${E[id].c}">${tot}</td>`;
+    });
+    tfRow+=`<td class="r b">${totalGeral}</td></tr>`;
     const card=document.createElement('div'); card.className='card';
-    card.innerHTML=`<div class="ch"><h3>${CLBL[c]}</h3></div><div class="sx"><table class="t"><thead>${th}</thead><tbody>${tb}</tbody></table></div>`;
+    card.innerHTML=`<div class="ch"><h3>${CLBL[c]}</h3><span class="ch-s">mínimo total: ${totalGeral} peças</span></div><div class="sx"><table class="t"><thead>${th}</thead><tbody>${tb}${tfRow}</tbody></table></div>`;
     el.appendChild(card);
   });
 }
@@ -781,14 +827,28 @@ function renderPed(){
           <td class="r">${r.atual}</td><td class="r">${r.seg}</td>
           <td class="r"><span class="${r.need>0?'oqty':'oqty z'}">${r.need>0?r.need:'—'}</span></td>
         </tr>`).join('');
+      // Total row for this category
+      const totAtual=catData[c].reduce((a,r)=>a+r.atual,0);
+      const totSeg=catData[c].reduce((a,r)=>a+r.seg,0);
+      const totNeed=catData[c].reduce((a,r)=>a+r.need,0);
+      const totRow=`<tr style="border-top:2px solid #e8e8e8;background:#fafafa">
+        <td class="b" colspan="2" style="font-size:10px;text-transform:uppercase;letter-spacing:.05em">Total</td>
+        <td class="r b">${totAtual}</td><td class="r b">${totSeg}</td>
+        <td class="r"><span class="${totNeed>0?'oqty':'oqty z'}">${totNeed>0?totNeed:'—'}</span></td>
+      </tr>`;
       card.innerHTML+=`<table class="oct">
         <thead>
-          <tr><th colspan="4" class="cath" style="background:${emp.c}18;color:${emp.c}">${CLBL[c]}</th></tr>
-          <tr><th>Faixa</th><th class="r">Atual</th><th class="r">Mínimo</th><th class="r">Pedir</th></tr>
-        </thead><tbody>${tb}</tbody></table>`;
+          <tr><th colspan="5" class="cath" style="background:${emp.c}18;color:${emp.c}">${CLBL[c]}</th></tr>
+          <tr><th>Faixa</th><th></th><th class="r">Atual</th><th class="r">Mínimo</th><th class="r">Pedir</th></tr>
+        </thead><tbody>${tb}${totRow}</tbody></table>`;
     });
     const vm=Object.keys(BND).reduce((a,c)=>a+BND[c].reduce((b2,bnd)=>b2+semM(id,c,bnd),0),0);
-    card.innerHTML+=`<div class="ofoot"><span>Venda méd./semana: <strong>${vm.toFixed(1)} peças</strong></span><span>${S.sem?S.sem.data:''}</span></div>`;
+    const totalEstoque=Object.keys(BND).reduce((a,c)=>a+catData[c].reduce((b2,r)=>b2+r.atual,0),0);
+    const totalPedir=Object.keys(BND).reduce((a,c)=>a+catData[c].reduce((b2,r)=>b2+r.need,0),0);
+    card.innerHTML+=`<div class="ofoot">
+      <span>Estoque: <strong>${totalEstoque}</strong> · Pedir: <strong style="color:${totalPedir>0?'var(--danger)':'var(--ok)'}">${totalPedir||'OK'}</strong></span>
+      <span>Venda méd.: ${vm.toFixed(1)}/sem</span>
+    </div>`;
     grid.appendChild(card);
   });
   el.appendChild(grid);
