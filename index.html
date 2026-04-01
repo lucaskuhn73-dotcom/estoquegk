@@ -174,61 +174,59 @@ header { background:var(--white); border-bottom:1px solid var(--border); padding
 
 <header>
   <div class="logo">KUHN <em>Gestão de Estoque</em></div>
-  <div id="hdr-meta">Nenhum arquivo carregado</div>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <button id="btn-atualizar" onclick="atualizarDash()" style="display:none;padding:5px 12px;border:1px solid var(--border);border-radius:4px;background:var(--white);font-family:Inter,sans-serif;font-size:11px;font-weight:600;cursor:pointer;" onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background='var(--white)'">↻ Atualizar</button>
+    <div id="hdr-meta" style="font-size:11px;color:var(--muted);text-align:right;"></div>
+  </div>
 </header>
 
 <!-- UPLOAD -->
 <div id="upload-wrap">
-  <h1>Dashboard de Estoque</h1>
-  <div class="sub">Conecte ao Google Sheets para carregar dados salvos, ou suba um novo inventário.</div>
+  <h1>Estoque — Grupo Kuhn</h1>
+  <div class="sub">Carregue o inventário semanal ou atualize os dados já salvos.</div>
 
-  <!-- Sheets connection -->
-  <div style="margin-bottom:16px;padding:14px 16px;border:1px solid var(--border);border-radius:6px;background:var(--light);">
-    <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">Google Sheets</div>
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-      <input id="inp-url" type="text" placeholder="Cole aqui a URL do Apps Script..." style="flex:1;min-width:240px;border:1px solid var(--border);border-radius:4px;padding:7px 10px;font-family:Inter,sans-serif;font-size:12px;">
-      <button class="btn-main" style="padding:7px 16px;font-size:12px" onclick="conectarSheets()">Conectar</button>
-      <button class="btn-main" id="btn-carregar" onclick="carregarSheets()" disabled style="padding:7px 16px;font-size:12px;background:#fff;color:var(--text);border:1px solid var(--border)">Carregar do Sheets</button>
-    </div>
-    <div id="sheets-status" style="font-size:11px;color:var(--muted);margin-top:6px">Não conectado.</div>
+  <!-- Ações principais -->
+  <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
+    <button class="btn-main" onclick="carregarSheets()" id="btn-carregar">
+      ↓ Carregar dados do Sheets
+    </button>
+    <div id="sheets-status" style="font-size:11px;color:var(--muted);align-self:center;"></div>
   </div>
 
   <!-- Semanas salvas -->
-  <div id="semanas-salvas" style="display:none;margin-bottom:16px;padding:14px 16px;border:1px solid var(--border);border-radius:6px;">
-    <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:10px">Semanas no Sheets</div>
-    <div id="semanas-lista" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+  <div id="semanas-salvas" style="display:none;margin-bottom:20px;padding:12px 14px;border:1px solid var(--border);border-radius:6px;background:var(--light);">
+    <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:8px">Semanas já salvas</div>
+    <div id="semanas-lista" style="display:flex;flex-wrap:wrap;gap:5px;"></div>
   </div>
+
+  <hr style="border:none;border-top:1px solid var(--border);margin-bottom:20px;">
 
   <!-- Upload nova semana -->
-  <div style="padding:14px 16px;border:1px solid var(--border);border-radius:6px;">
-    <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:12px">Carregar nova semana</div>
+  <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:12px">Nova semana</div>
 
-    <!-- Número da semana -->
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
-      <div style="font-size:12px;font-weight:500;">Semana nº</div>
-      <input id="inp-semana" type="number" min="1" max="999" value="1"
-        style="width:72px;border:1px solid var(--border);border-radius:4px;padding:6px 8px;font-family:Inter,sans-serif;font-size:13px;font-weight:600;text-align:center;">
-      <div id="semana-aviso" style="font-size:11px;color:var(--warn);display:none;">⚠ Esta semana já existe no Sheets — será sobrescrita.</div>
-    </div>
-
-    <div class="upload-row">
-      <div class="uc" id="uc-inv">
-        <div class="uc-lbl" id="lb-inv">Aguardando</div>
-        <div class="uc-name">Registro de Inventário</div>
-        <div class="uc-hint">ExportacaoRegistroInventario.csv</div>
-        <input type="file" accept=".csv" id="fi-inv">
-      </div>
-      <div class="uc" id="uc-ven">
-        <div class="uc-lbl" id="lb-ven">Opcional</div>
-        <div class="uc-name">Produtos Vendidos</div>
-        <div class="uc-hint">Só na primeira vez — fica salvo no Sheets</div>
-        <input type="file" accept=".csv" id="fi-ven">
-      </div>
-    </div>
-
-    <button class="btn-main" id="btn-ok" onclick="analisar()" disabled>Analisar e Salvar Semana</button>
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+    <span style="font-size:12px;font-weight:500;">Semana nº</span>
+    <input id="inp-semana" type="number" min="1" max="999" value="1"
+      style="width:68px;border:1px solid var(--border);border-radius:4px;padding:5px 8px;font-family:Inter,sans-serif;font-size:14px;font-weight:700;text-align:center;">
+    <span id="semana-aviso" style="font-size:11px;color:var(--warn);display:none;">⚠ Semana já existe — será sobrescrita</span>
   </div>
 
+  <div class="upload-row">
+    <div class="uc" id="uc-inv">
+      <div class="uc-lbl" id="lb-inv">Aguardando</div>
+      <div class="uc-name">Registro de Inventário</div>
+      <div class="uc-hint">ExportacaoRegistroInventario.csv</div>
+      <input type="file" accept=".csv" id="fi-inv">
+    </div>
+    <div class="uc" id="uc-ven">
+      <div class="uc-lbl" id="lb-ven">Opcional</div>
+      <div class="uc-name">Produtos Vendidos</div>
+      <div class="uc-hint">Só na primeira vez — fica salvo no Sheets</div>
+      <input type="file" accept=".csv" id="fi-ven">
+    </div>
+  </div>
+
+  <button class="btn-main" id="btn-ok" onclick="analisar()" disabled>Salvar Semana no Sheets</button>
   <div id="err-msg"></div>
 </div>
 
@@ -315,11 +313,13 @@ const CLBL = {OCULOS:'Óculos',RELOGIOS:'Relógios',GRAU:'Grau / Multi Lente'};
 // ─── STATE ────────────────────────────────────
 const S = { invs:{}, sem:null, vend:[], ss:{}, f:'TODAS', sheetsUrl:'' };
 
-// ─── SHEETS INTEGRATION ───────────────────────
+// ─── SHEETS ───────────────────────────────────
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbySnwnwmacgP7ANi5oEtDRgaY7RpNt2HJ_Oh6KZcv3QOofTzEkT1uSs7BgSfjtafUF99Q/exec';
+
 function setSheetsStatus(msg, ok) {
   const el = document.getElementById('sheets-status');
   el.textContent = msg;
-  el.style.color = ok ? '#2e7d32' : ok===false ? '#c0392b' : '#888';
+  el.style.color = ok===true ? '#2e7d32' : ok===false ? '#c0392b' : '#888';
 }
 
 function renderSemanasSalvas() {
@@ -329,9 +329,10 @@ function renderSemanasSalvas() {
   if (!semanas.length) { wrap.style.display='none'; return; }
   wrap.style.display = 'block';
   lista.innerHTML = semanas.map(s =>
-    `<span style="padding:3px 10px;border-radius:20px;border:1px solid var(--border);font-size:11px;font-weight:600;background:#fff">S${s}</span>`
+    `<span style="padding:2px 10px;border-radius:20px;border:1px solid var(--border);
+      font-size:11px;font-weight:600;background:#fff;cursor:default">S${s}</span>`
   ).join('');
-  // Sugerir próximo número
+  // Sugerir próximo número automaticamente
   const prox = Math.max(...semanas.map(Number)) + 1;
   document.getElementById('inp-semana').value = prox;
   checarDuplicata();
@@ -340,11 +341,84 @@ function renderSemanasSalvas() {
 function checarDuplicata() {
   const num = document.getElementById('inp-semana').value.trim();
   const aviso = document.getElementById('semana-aviso');
-  aviso.style.display = S.invs[num] ? 'block' : 'none';
+  if (aviso) aviso.style.display = S.invs[num] ? 'block' : 'none';
 }
 
+async function carregarSheets() {
+  setSheetsStatus('Carregando...', null);
+  document.getElementById('btn-carregar').disabled = true;
+  try {
+    const d = await fetch(SHEETS_URL + '?action=getData').then(r => r.json());
+    if (!d.ok) throw new Error(d.error);
+
+    S.invs = d.invs || {};
+    S.vend = d.vend || [];
+    S.ss   = d.ss   || {};
+
+    renderSemanasSalvas();
+
+    const semanas = Object.keys(S.invs).sort((a,b)=>Number(a)-Number(b));
+    if (!semanas.length) {
+      setSheetsStatus('Sem dados ainda — suba a Semana 1.', null);
+      document.getElementById('btn-carregar').disabled = false;
+      return;
+    }
+
+    const ultima = semanas[semanas.length-1];
+    S.sem = { key: ultima, rows: S.invs[ultima], data: `Semana ${ultima}` };
+    if (Object.keys(S.ss).length === 0) initSS();
+    updSel();
+    mostrarApp();
+    setSheetsStatus(`✓ ${semanas.length} semana(s) carregada(s)`, true);
+  } catch(e) {
+    setSheetsStatus('Erro: ' + e.message, false);
+    document.getElementById('btn-carregar').disabled = false;
+  }
+}
+
+async function enviarParaSheets(numSemana, rows) {
+  setSheetsStatus('Salvando no Sheets...', null);
+  try {
+    const r1 = await fetch(SHEETS_URL, {
+      method:'POST',
+      body: JSON.stringify({ action:'saveInventario', semana:numSemana, rows })
+    }).then(r=>r.json());
+    if (!r1.ok) throw new Error(r1.error);
+
+    if (S.vend.length > 0) {
+      await fetch(SHEETS_URL, {
+        method:'POST',
+        body: JSON.stringify({ action:'saveVendidos', rows:S.vend })
+      }).then(r=>r.json());
+    }
+
+    await fetch(SHEETS_URL, {
+      method:'POST',
+      body: JSON.stringify({ action:'saveSeguranca', ss:S.ss })
+    }).then(r=>r.json());
+
+    setSheetsStatus(`✓ Semana ${numSemana} salva — ${new Date().toLocaleTimeString('pt-BR')}`, true);
+  } catch(e) {
+    setSheetsStatus('Erro ao salvar: ' + e.message, false);
+  }
+}
+
+async function salvarSSSheets() {
+  try {
+    await fetch(SHEETS_URL, {
+      method:'POST',
+      body: JSON.stringify({ action:'saveSeguranca', ss:S.ss })
+    }).then(r=>r.json());
+    setSheetsStatus('✓ Estoque de segurança salvo', true);
+  } catch(e) {
+    setSheetsStatus('Erro ao salvar: ' + e.message, false);
+  }
+}
+
+// Listener do número de semana
 document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('inp-semana').addEventListener('input', checarDuplicata);
+  const inp = document.getElementById('inp-semana');
+  if (inp) inp.addEventListener('input', checarDuplicata);
 });
 
 function conectarSheets() {
@@ -558,12 +632,39 @@ async function analisar(){
   }catch(e){errMsg('Erro: '+e.message);console.error(e);}
 }
 
+async function atualizarDash(){
+  const btn = document.getElementById('btn-atualizar');
+  btn.textContent = '↻ Atualizando...';
+  btn.disabled = true;
+  try {
+    const d = await fetch(SHEETS_URL + '?action=getData').then(r=>r.json());
+    if (!d.ok) throw new Error(d.error);
+    S.invs = d.invs || S.invs;
+    S.vend = d.vend.length ? d.vend : S.vend;
+    S.ss   = Object.keys(d.ss||{}).length ? d.ss : S.ss;
+    const semanas = Object.keys(S.invs).sort((a,b)=>Number(a)-Number(b));
+    if (semanas.length) {
+      const ultima = semanas[semanas.length-1];
+      S.sem = { key:ultima, rows:S.invs[ultima], data:`Semana ${ultima}` };
+    }
+    updSel(); renderAll();
+    const n = Object.keys(S.invs).length;
+    document.getElementById('hdr-meta').innerHTML =
+      `Semana atual: <strong>${S.sem.data}</strong> &nbsp;·&nbsp; ${n} semana(s) &nbsp;·&nbsp; ✓ atualizado ${new Date().toLocaleTimeString('pt-BR')}`;
+  } catch(e) {
+    document.getElementById('hdr-meta').textContent = 'Erro ao atualizar: ' + e.message;
+  }
+  btn.textContent = '↻ Atualizar';
+  btn.disabled = false;
+}
+
 function mostrarApp(){
   document.getElementById('upload-wrap').style.display='none';
   document.getElementById('app').style.display='block';
+  document.getElementById('btn-atualizar').style.display='block';
   const semanas=Object.keys(S.invs).sort((a,b)=>Number(a)-Number(b));
   document.getElementById('hdr-meta').innerHTML=
-    `Semana atual: <strong>${S.sem.data}</strong> &nbsp;·&nbsp; ${S.sem.rows.length} itens &nbsp;·&nbsp; ${S.vend.length} vendas &nbsp;·&nbsp; ${semanas.length} semana(s) no histórico`;
+    `Semana atual: <strong>${S.sem.data}</strong> &nbsp;·&nbsp; ${S.sem.rows.length} itens &nbsp;·&nbsp; ${semanas.length} semana(s)`;
   renderAll();
 }
 
@@ -822,15 +923,12 @@ function renderPed(){
 }
 
 // ─── INIT ─────────────────────────────────────
+// Carregar Sheets automaticamente ao abrir a página
 window.addEventListener('DOMContentLoaded', () => {
-  const saved = localStorage.getItem('kuhn_sheets_url');
-  if (saved) {
-    document.getElementById('inp-url').value = saved;
-    S.sheetsUrl = saved;
-    document.getElementById('btn-carregar').disabled = false;
-    setSheetsStatus('URL salva encontrada — clique em Carregar do Sheets ou suba um novo inventário.', null);
-  }
-  document.getElementById('inp-semana').addEventListener('input', checarDuplicata);
+  const inp = document.getElementById('inp-semana');
+  if (inp) inp.addEventListener('input', checarDuplicata);
+  setSheetsStatus('Carregando dados...', null);
+  carregarSheets();
 });
 </script>
 </body>
